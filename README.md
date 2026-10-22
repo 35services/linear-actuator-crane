@@ -4,7 +4,8 @@
 
 ![crane concept](cad/renders/crane.png)
 
-**All CAD renderings and printable STLs:** [`cad/`](cad/README.md). The concept sketch
+**All CAD renderings and printable STLs:** [`cad/`](cad/README.md). **Carrier PCB with
+Gerbers ready to order:** [`pcb/`](pcb/README.md). The concept sketch
 that started it is [`gemini.jpeg`](gemini.jpeg).
 
 Drive two mini stepper‑motor linear actuators (2‑phase, 4‑wire, lead screw + slider) from
@@ -81,7 +82,7 @@ Features:
 | 13 | 2 | Servo extension lead | Receiver channels → board | €2 |
 | 14 | 1 | Inline fuse 2 A (optional) | In the battery line to the drivers | €1 |
 | 15 | 1 set | Nesting square tubes (aluminium/brass, e.g. 16×12 and 11×7 mm) | Telescopic boom. See [Mechanics](#5-mechanics) | €5 |
-| 16 | | Carrier PCB or perfboard, JST‑XH connectors, female pin headers, heat‑shrink | | |
+| 16 | | [Carrier PCB](pcb/README.md) (or perfboard), JST‑XH connectors, female pin headers, heat‑shrink | | |
 
 **Vehicle drive (for reference):** Hobbywing **QuicRun Fusion SE** 1800 kV crawler motor/ESC
 combo. It takes 2–3S LiPo (up to 12.6 V) and has a switch‑mode **BEC of 6 V or 7.4 V
@@ -95,6 +96,11 @@ combo. It takes 2–3S LiPo (up to 12.6 V) and has a switch‑mode **BEC of 6 V 
 | TMC2208 | ❌ | silent | potentiometer/UART | OK, hard‑stop homing only |
 | A4988 / DRV8825 | ❌ | loud | potentiometer | Works, but crude for tiny motors |
 | DRV8833 (H‑bridge) | ❌ | – | none (voltage‑driven) | Only for 5 V motors on a 5 V supply. No current limit |
+
+> **What's the little potentiometer on the TMC2209 module for?** The onboard pot sets
+> motor current in standalone mode via VREF, but since our firmware controls current over
+> UART and disables VREF with `I_scale_analog(false)`, the pot has no effect and can be
+> ignored.
 
 ---
 
