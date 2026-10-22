@@ -2,8 +2,14 @@
 
 Run with KiCad's bundled Python (it provides the pcbnew module), see build.sh:
 
-    generate_pcb.py place  <board.kicad_pcb> <board.dsn>   # place parts, nets, outline -> DSN for Freerouting
-    generate_pcb.py finish <board.kicad_pcb> <board.ses>   # import routes, add GND pours
+    generate_pcb.py place  <board.kicad_pcb> <board.dsn> [tht|smd]   # place parts, nets, outline -> DSN for Freerouting
+    generate_pcb.py finish <board.kicad_pcb> <board.ses>             # import routes, add GND pours
+
+Variants:
+    tht  everything through-hole, for hand soldering
+    smd  passives, diodes and the regulator as SMD with LCSC part numbers for JLCPCB
+         assembly; sockets, headers, connectors and the terminal stay through-hole
+         and are hand-soldered
 
 All placement and connectivity lives in the tables below. Coordinates in mm,
 KiCad convention: y grows downwards, rotation in degrees counter-clockwise.
@@ -113,6 +119,37 @@ PARTS = [
     ("D6", "Diode_THT", "D_DO-35_SOD27_P7.62mm_Horizontal", "BAT85", 80, 41, 90, {"1": "+3V3", "2": "RC1"}),
 ]
 
+# SMD variant: these parts replace their THT counterparts. Everything not listed here
+# (sockets, headers, JST, terminal, solder jumpers) is kept and hand-soldered.
+# ref: library, footprint, value, x, y, rotation, {pad: net}, LCSC part number
+SMD_PARTS = {
+    "C1": ("Capacitor_SMD", "CP_Elec_6.3x7.7", "100u 35V", 32.75, 9.5, 0, {"1": "VM", "2": "GND"}, "C2836442"),
+    "C2": ("Capacitor_SMD", "CP_Elec_6.3x7.7", "100u 35V", 54.75, 9.5, 0, {"1": "VM", "2": "GND"}, "C2836442"),
+    "R1": ("Resistor_SMD", "R_0805_2012Metric", "1k", 73.6, 11, 0, {"1": "UART_TX", "2": "UART"}, "C17513"),
+    "R2": ("Resistor_SMD", "R_0805_2012Metric", "10k", 73.6, 14.6, 0, {"1": "DIAG", "2": "GND"}, "C17414"),
+    "D2": ("Diode_SMD", "D_SOD-123", "1N4148W", 73.6, 18.2, 0, {"1": "DIAG", "2": "DIAG0"}, "C81598"),
+    "D3": ("Diode_SMD", "D_SOD-123", "1N4148W", 73.6, 21.8, 0, {"1": "DIAG", "2": "DIAG1"}, "C81598"),
+    "D1": ("Diode_SMD", "D_SMA", "SS34", 9, 38.4, 90, {"1": "VM", "2": "VBAT_IN"}, "C8678"),
+    # AMS1117: 1 GND, 2 OUT (and tab), 3 IN
+    "U4": ("Package_TO_SOT_SMD", "SOT-223-3_TabPin2", "AMS1117-5.0", 27, 52, 0,
+           {"1": "GND", "2": "+5V_REG", "3": "VBEC"}, "C6187"),
+    "C3": ("Capacitor_SMD", "C_0805_2012Metric", "10u 25V", 36, 52, 0, {"1": "VBEC", "2": "GND"}, "C15850"),
+    "C4": ("Capacitor_SMD", "C_0805_2012Metric", "22u 25V", 41, 52, 0, {"1": "+5V_REG", "2": "GND"}, "C45783"),
+    "D4": ("Diode_SMD", "D_SOD-123", "B5819W", 47, 52, 0, {"1": "+5V", "2": "+5V_REG"}, "C8598"),
+    "R3": ("Resistor_SMD", "R_0805_2012Metric", "1k", 66, 37.2, 90, {"1": "RC0_IN", "2": "RC0"}, "C17513"),
+    "D5": ("Diode_SMD", "D_SOD-123", "B5819W", 70, 37.2, 90, {"1": "+3V3", "2": "RC0"}, "C8598"),
+    "R4": ("Resistor_SMD", "R_0805_2012Metric", "1k", 76, 37.2, 90, {"1": "RC1_IN", "2": "RC1"}, "C17513"),
+    "D6": ("Diode_SMD", "D_SOD-123", "B5819W", 80, 37.2, 90, {"1": "+3V3", "2": "RC1"}, "C8598"),
+}
+
+
+def parts_for(variant):
+    """PARTS as (ref, lib, name, value, x, y, rot, nets, lcsc) for the given variant."""
+    if variant == "tht":
+        return [p + (None,) for p in PARTS]
+    return [(p[0],) + SMD_PARTS[p[0]] if p[0] in SMD_PARTS else p + (None,) for p in PARTS]
+
+
 # references that need a hand-picked position (absolute mm)
 REF_POS = {"J1": (12.2, 10.0), "JP1": (19.5, 28.4), "JP2": (41.3, 28.4)}
 
@@ -214,17 +251,38 @@ def write_project_rules(board_path):
         json.dump(pro, f, indent=2)
 
 
-def write_bom(path):
+def write_bom(path, parts):
     groups = {}
-    for ref, lib, name, value, *_ in PARTS:
-        groups.setdefault((value, f"{lib}:{name}"), []).append(ref)
+    for ref, lib, name, value, *_, lcsc in parts:
+        groups.setdefault((value, f"{lib}:{name}", lcsc or ""), []).append(ref)
     with open(path, "w") as f:
-        f.write("Qty,References,Value,Footprint\n")
-        for (value, footprint), refs in sorted(groups.items(), key=lambda g: g[1][0]):
-            f.write(f'{len(refs)},"{" ".join(refs)}","{value}","{footprint}"\n')
+        f.write("Qty,References,Value,Footprint,LCSC\n")
+        for (value, footprint, lcsc), refs in sorted(groups.items(), key=lambda g: g[1][0]):
+            f.write(f'{len(refs)},"{" ".join(refs)}","{value}","{footprint}","{lcsc}"\n')
 
 
-def place(board_path, dsn_path):
+def write_jlcpcb_files(board, out_dir, parts):
+    """BOM + CPL in JLCPCB's format, only the parts JLCPCB places (those with an LCSC number)."""
+    assembled = {p[0]: p for p in parts if p[-1]}
+    groups = {}
+    for ref, lib, name, value, *_, lcsc in assembled.values():
+        groups.setdefault((value, name, lcsc), []).append(ref)
+    with open(os.path.join(out_dir, "jlcpcb_bom.csv"), "w") as f:
+        f.write("Comment,Designator,Footprint,LCSC Part #\n")
+        for (value, name, lcsc), refs in sorted(groups.items(), key=lambda g: g[1][0]):
+            f.write(f'"{value}","{",".join(refs)}","{name}","{lcsc}"\n')
+    with open(os.path.join(out_dir, "jlcpcb_cpl.csv"), "w") as f:
+        f.write("Designator,Mid X,Mid Y,Layer,Rotation\n")
+        for fp in sorted(board.GetFootprints(), key=lambda fp: fp.GetReference()):
+            if fp.GetReference() in assembled:
+                p = fp.GetPosition()
+                # Gerber coordinates: y axis points up
+                f.write(f"{fp.GetReference()},{pcbnew.ToMM(p.x):.3f}mm,{-pcbnew.ToMM(p.y):.3f}mm,Top,"
+                        f"{fp.GetOrientationDegrees() % 360:.0f}\n")
+
+
+def place(board_path, dsn_path, variant="tht"):
+    parts = parts_for(variant)
     board = pcbnew.CreateEmptyBoard()
     setup_net_classes(board)
 
@@ -237,7 +295,7 @@ def place(board_path, dsn_path):
             nets[name] = item
         return nets[name]
 
-    for ref, lib, name, value, x, y, rot, pad_nets in PARTS:
+    for ref, lib, name, value, x, y, rot, pad_nets, lcsc in parts:
         fp = pcbnew.FootprintLoad(os.path.join(FP_DIR, lib + ".pretty"), name)
         if fp is None:
             sys.exit(f"footprint not found: {lib}:{name}")
@@ -249,7 +307,21 @@ def place(board_path, dsn_path):
         fp.SetOrientationDegrees(rot)
         board.Add(fp)
         pads = list(fp.Pads())
-        if ref[0] in "RD" or ref in ("U2", "U3"):
+        if ref[0] in "RD" and lib.endswith("_SMD"):
+            # SMD parts are too small for text inside: put the reference just beside the pads
+            box = pads[0].GetBoundingBox()
+            for pad in pads[1:]:
+                box.Merge(pad.GetBoundingBox())
+            ref_text = fp.Reference()
+            ref_text.SetTextSize(pcbnew.VECTOR2I(mm(0.8), mm(0.8)))
+            ref_text.SetTextThickness(mm(0.12))
+            ref_text.SetTextAngleDegrees(0)
+            if rot % 180 == 0:
+                ref_text.SetHorizJustify(pcbnew.GR_TEXT_H_ALIGN_LEFT)
+                ref_text.SetPosition(pcbnew.VECTOR2I(box.GetRight() + mm(0.6), box.GetCenter().y))
+            else:
+                ref_text.SetPosition(pcbnew.VECTOR2I(box.GetCenter().x, box.GetBottom() + mm(1.0)))
+        elif ref[0] in "RD" or ref in ("U2", "U3"):
             # axial parts are packed tightly: put the reference inside the body outline,
             # the driver modules have empty space between their pin rows
             ref_text = fp.Reference()
@@ -288,15 +360,20 @@ def place(board_path, dsn_path):
         add_text(board, ESP_LABELS.get(p, p.replace("GPIO", "")), 66 - 2.2, 8 + i * 2.54, 0.8, 1)
     for i, p in enumerate(ESP_RIGHT):
         add_text(board, ESP_LABELS.get(p, p.replace("GPIO", "")), 66 + ESP_ROW_SPACING + 2.2, 8 + i * 2.54, 0.8, -1)
-    for args in SILK:
-        add_text(board, *args)
+    for text, *args in SILK:
+        if variant == "smd" and text.startswith("RC CRANE CARRIER"):
+            text += " SMD"
+        add_text(board, text, *args)
 
     board.Save(board_path)
     write_project_rules(board_path)
-    write_bom(os.path.join(os.path.dirname(os.path.abspath(board_path)), "bom.csv"))
+    out_dir = os.path.dirname(os.path.abspath(board_path))
+    write_bom(os.path.join(out_dir, "bom.csv"), parts)
+    if variant == "smd":
+        write_jlcpcb_files(board, out_dir, parts)
     if not pcbnew.ExportSpecctraDSN(board, dsn_path):
         sys.exit("DSN export failed")
-    print(f"placed {len(PARTS)} parts, {len(nets)} nets -> {board_path}, {dsn_path}")
+    print(f"placed {len(parts)} parts ({variant}), {len(nets)} nets -> {board_path}, {dsn_path}")
 
 
 def finish(board_path, ses_path):
@@ -326,6 +403,9 @@ def finish(board_path, ses_path):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4 or sys.argv[1] not in ("place", "finish"):
+    if sys.argv[1:2] == ["place"] and len(sys.argv) in (4, 5) and sys.argv[4:5] in ([], ["tht"], ["smd"]):
+        place(*sys.argv[2:])
+    elif sys.argv[1:2] == ["finish"] and len(sys.argv) == 4:
+        finish(sys.argv[2], sys.argv[3])
+    else:
         sys.exit(__doc__)
-    {"place": place, "finish": finish}[sys.argv[1]](sys.argv[2], sys.argv[3])

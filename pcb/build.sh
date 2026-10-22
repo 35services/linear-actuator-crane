@@ -3,14 +3,18 @@
 #   place parts (generate_pcb.py) -> autoroute (Freerouting) -> GND pour -> DRC
 #   -> Gerbers + drill (fab/), renders (renders/)
 #
+# Two variants are built side by side:
+#   tht  pcb/rc-crane-carrier.kicad_pcb          everything through-hole, hand soldered
+#   smd  pcb/smd/rc-crane-carrier-smd.kicad_pcb  SMD parts assembled by JLCPCB, connectors by hand
+#
 # Needs KiCad 10 and Java 21+. Freerouting is downloaded on first run.
-#   ./pcb/build.sh             # full rebuild, re-routes the board
-#   ./pcb/build.sh outputs     # only DRC, fab files and renders from the existing board
+#   ./pcb/build.sh                 # both variants, full rebuild (re-routes)
+#   ./pcb/build.sh smd             # one variant
+#   ./pcb/build.sh smd outputs     # only DRC, fab files and renders from the existing board
 
 set -euo pipefail
 cd "$(dirname "$0")"
 
-BOARD=rc-crane-carrier.kicad_pcb
 FREEROUTING_VERSION=2.5.0
 
 if [[ "$(uname)" == "Darwin" ]]; then
@@ -23,43 +27,66 @@ else
   export KICAD_FOOTPRINT_DIR=${KICAD_FOOTPRINT_DIR:-/usr/share/kicad/footprints}
 fi
 
-CACHE=.cache
-mkdir -p "$CACHE" fab renders
+CACHE=$PWD/.cache
+mkdir -p "$CACHE"
 
-if [[ "${1:-all}" != "outputs" ]]; then
-  JAR=$CACHE/freerouting-$FREEROUTING_VERSION.jar
-  if [[ ! -f $JAR ]]; then
-    echo "Downloading Freerouting $FREEROUTING_VERSION"
-    curl -fsSL -o "$JAR" \
-      "https://github.com/freerouting/freerouting/releases/download/v$FREEROUTING_VERSION/freerouting-$FREEROUTING_VERSION.jar"
+build() {  # build <variant> <dir> <board name> [outputs]
+  local variant=$1 dir=$2 name=$3 mode=${4:-all}
+  local BOARD=$dir/$name.kicad_pcb
+  echo "######## $variant -> $BOARD"
+  mkdir -p "$dir/fab" "$dir/renders"
+
+  if [[ "$mode" != "outputs" ]]; then
+    JAR=$CACHE/freerouting-$FREEROUTING_VERSION.jar
+    if [[ ! -f $JAR ]]; then
+      echo "Downloading Freerouting $FREEROUTING_VERSION"
+      curl -fsSL -o "$JAR" \
+        "https://github.com/freerouting/freerouting/releases/download/v$FREEROUTING_VERSION/freerouting-$FREEROUTING_VERSION.jar"
+    fi
+
+    echo "== Place"
+    "$KICAD_PYTHON" generate_pcb.py place "$BOARD" "$CACHE/board.dsn" "$variant"
+    echo "== Route"
+    java -jar "$JAR" -de "$CACHE/board.dsn" -do "$CACHE/board.ses" -mp 100 2>&1 \
+      | grep -E "Auto-routing stage completed" | sed 's/.*final score/final score/'
+    echo "== Pour"
+    "$KICAD_PYTHON" generate_pcb.py finish "$BOARD" "$CACHE/board.ses"
   fi
 
-  echo "== Place"
-  "$KICAD_PYTHON" generate_pcb.py place "$BOARD" "$CACHE/board.dsn"
-  echo "== Route"
-  java -jar "$JAR" -de "$CACHE/board.dsn" -do "$CACHE/board.ses" -mp 100 2>&1 \
-    | grep -E "Auto-routing stage completed" | sed 's/.*final score/final score/'
-  echo "== Pour"
-  "$KICAD_PYTHON" generate_pcb.py finish "$BOARD" "$CACHE/board.ses"
-fi
+  echo "== DRC"
+  "$KICAD_CLI" pcb drc --severity-all --exit-code-violations -o "$CACHE/drc.rpt" "$BOARD" \
+    || { cat "$CACHE/drc.rpt"; exit 1; }
 
-echo "== DRC"
-"$KICAD_CLI" pcb drc --severity-all --exit-code-violations -o "$CACHE/drc.rpt" "$BOARD" \
-  || { cat "$CACHE/drc.rpt"; exit 1; }
+  echo "== Fab files"
+  rm -rf "$dir/fab/gerbers"
+  "$KICAD_CLI" pcb export gerbers -o "$dir/fab/gerbers/" \
+    --layers F.Cu,B.Cu,F.Paste,B.Paste,F.Silkscreen,B.Silkscreen,F.Mask,B.Mask,Edge.Cuts "$BOARD" >/dev/null
+  "$KICAD_CLI" pcb export drill -o "$dir/fab/gerbers/" --format excellon --excellon-separate-th "$BOARD" >/dev/null
+  (cd "$dir/fab/gerbers" && rm -f "../$name-gerbers.zip" && zip -qr "../$name-gerbers.zip" .)
 
-echo "== Fab files"
-rm -rf fab/gerbers
-"$KICAD_CLI" pcb export gerbers -o fab/gerbers/ \
-  --layers F.Cu,B.Cu,F.Paste,B.Paste,F.Silkscreen,B.Silkscreen,F.Mask,B.Mask,Edge.Cuts "$BOARD" >/dev/null
-"$KICAD_CLI" pcb export drill -o fab/gerbers/ --format excellon --excellon-separate-th "$BOARD" >/dev/null
-(cd fab/gerbers && rm -f ../rc-crane-carrier-gerbers.zip && zip -qr ../rc-crane-carrier-gerbers.zip .)
+  echo "== Renders"
+  for side in top bottom; do
+    "$KICAD_CLI" pcb render --side "$side" --quality high --width 1600 --height 1100 \
+      --background opaque -o "$dir/renders/board_$side.png" "$BOARD" >/dev/null
+  done
+  "$KICAD_CLI" pcb render --side top --perspective --rotate "-35,0,25" --zoom 0.9 --quality high \
+    --width 1600 --height 1100 --background opaque -o "$dir/renders/board_3d.png" "$BOARD" >/dev/null
 
-echo "== Renders"
-for side in top bottom; do
-  "$KICAD_CLI" pcb render --side "$side" --quality high --width 1600 --height 1100 \
-    --background opaque -o "renders/board_$side.png" "$BOARD" >/dev/null
+  echo "Done: $dir/fab/$name-gerbers.zip, $dir/renders/, $dir/bom.csv"
+}
+
+variants=(tht smd)
+mode=all
+for arg in "$@"; do
+  case $arg in
+    tht|smd) variants=("$arg") ;;
+    outputs) mode=outputs ;;
+    *) echo "unknown argument: $arg"; exit 2 ;;
+  esac
 done
-"$KICAD_CLI" pcb render --side top --perspective --rotate "-35,0,25" --zoom 0.9 --quality high \
-  --width 1600 --height 1100 --background opaque -o renders/board_3d.png "$BOARD" >/dev/null
-
-echo "Done: fab/rc-crane-carrier-gerbers.zip, renders/, bom.csv"
+for v in "${variants[@]}"; do
+  case $v in
+    tht) build tht . rc-crane-carrier "$mode" ;;
+    smd) build smd smd rc-crane-carrier-smd "$mode" ;;
+  esac
+done

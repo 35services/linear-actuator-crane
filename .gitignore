@@ -1,5 +1,5 @@
 .DS_Store
 pcb/.cache/
-pcb/*.kicad_prl
-pcb/~*.lck
+pcb/**/*.kicad_prl
+pcb/**/~*.lck
 pcb/*-backups/

@@ -1,0 +1,10 @@
+Comment,Designator,Footprint,LCSC Part #
+"100u 35V","C1,C2","CP_Elec_6.3x7.7","C2836442"
+"10u 25V","C3","C_0805_2012Metric","C15850"
+"22u 25V","C4","C_0805_2012Metric","C45783"
+"SS34","D1","D_SMA","C8678"
+"1N4148W","D2,D3","D_SOD-123","C81598"
+"B5819W","D4,D5,D6","D_SOD-123","C8598"
+"1k","R1,R3,R4","R_0805_2012Metric","C17513"
+"10k","R2","R_0805_2012Metric","C17414"
+"AMS1117-5.0","U4","SOT-223-3_TabPin2","C6187"
