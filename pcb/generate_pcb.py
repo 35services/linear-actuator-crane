@@ -26,7 +26,9 @@ FP_DIR = os.environ.get(
     "/Applications/KiCad/KiCad.app/Contents/SharedSupport/footprints",
 )
 
-BOARD_W = 90
+BOARD_W = 80
+# The tables below were laid out for a 10 mm wider board; everything is shifted left by this
+X_OFFSET = 10
 BOARD_H = 64
 HOLES = [(3.5, 3.5), (BOARD_W - 3.5, 3.5), (3.5, BOARD_H - 3.5), (BOARD_W - 3.5, BOARD_H - 3.5)]
 
@@ -54,7 +56,7 @@ def stepstick_pads(n, ms1):
         "1": "EN", "2": ms1, "3": "GND", "4": f"U{n}_P4", "5": f"U{n}_P5", "6": "GND",
         "7": f"STEP{n}", "8": f"DIR{n}",
         "9": "GND", "10": "+3V3", "11": f"M{n}_1B", "12": f"M{n}_1A",
-        "13": f"M{n}_2A", "14": f"M{n}_2B", "15": "GND", "16": "VM",
+        "13": f"M{n}_2A", "14": f"M{n}_2B", "15": "GND", "16": "VBEC",
     }
 
 
@@ -69,8 +71,8 @@ PARTS = [
     # TMC2209 drivers: #0 boom lift (address 0), #1 telescope (address 1 via MS1 = 3V3)
     ("U2", "Module", "Pololu_Breakout-16_15.2x20.3mm", "TMC2209 #0 lift", 24, 16, 0, stepstick_pads(0, "GND")),
     ("U3", "Module", "Pololu_Breakout-16_15.2x20.3mm", "TMC2209 #1 tele", 46, 16, 0, stepstick_pads(1, "+3V3")),
-    ("C1", "Capacitor_THT", "CP_Radial_D8.0mm_P3.50mm", "100u 35V", 31, 9.5, 0, {"1": "VM", "2": "GND"}),
-    ("C2", "Capacitor_THT", "CP_Radial_D8.0mm_P3.50mm", "100u 35V", 53, 9.5, 0, {"1": "VM", "2": "GND"}),
+    ("C1", "Capacitor_THT", "CP_Radial_D8.0mm_P3.50mm", "100u 35V", 31, 9.5, 0, {"1": "VBEC", "2": "GND"}),
+    ("C2", "Capacitor_THT", "CP_Radial_D8.0mm_P3.50mm", "100u 35V", 53, 9.5, 0, {"1": "VBEC", "2": "GND"}),
 
     # UART pin select: bridge centre to pin 4 or pin 5 depending on the driver brand
     ("JP1", "Jumper", "SolderJumper-3_P1.3mm_Open_RoundedPad1.0x1.5mm", "UART 4|5", 19.5, 24.9, 90,
@@ -94,12 +96,8 @@ PARTS = [
     ("J3", "Connector_JST", "JST_XH_B4B-XH-A_1x04_P2.50mm_Vertical", "Motor tele", 48, 40, 0,
      {"1": "M1_1A", "2": "M1_1B", "3": "M1_2A", "4": "M1_2B"}),
 
-    # Battery in (2S/3S) with reverse polarity diode
-    ("J1", "TerminalBlock_Phoenix", "TerminalBlock_Phoenix_MKDS-1,5-2-5.08_1x02_P5.08mm_Horizontal", "BAT 2-3S",
-     6, 22, 90, {"1": "VBAT_IN", "2": "GND"}),
-    ("D1", "Diode_THT", "D_DO-201AD_P15.24mm_Horizontal", "1N5822", 9, 46, 90, {"1": "VM", "2": "VBAT_IN"}),
-
-    # 5 V for the ESP32 from the 6 V / 7.4 V BEC
+    # Everything runs from the ESC's BEC (6 V / 7.4 V, 4 A), which arrives through the + pin of the
+    # RC headers: the drivers' VM directly, the ESP32 through a 5 V regulator
     ("U4", "Package_TO_SOT_THT", "TO-220-3_Vertical", "LM2940-5.0", 24, 52, 0,
      {"1": "VBEC", "2": "GND", "3": "+5V_REG"}),
     ("C3", "Capacitor_THT", "C_Disc_D5.0mm_W2.5mm_P5.00mm", "470n", 34, 52, 0, {"1": "VBEC", "2": "GND"}),
@@ -123,13 +121,12 @@ PARTS = [
 # (sockets, headers, JST, terminal, solder jumpers) is kept and hand-soldered.
 # ref: library, footprint, value, x, y, rotation, {pad: net}, LCSC part number
 SMD_PARTS = {
-    "C1": ("Capacitor_SMD", "CP_Elec_6.3x7.7", "100u 35V", 32.75, 9.5, 0, {"1": "VM", "2": "GND"}, "C2836442"),
-    "C2": ("Capacitor_SMD", "CP_Elec_6.3x7.7", "100u 35V", 54.75, 9.5, 0, {"1": "VM", "2": "GND"}, "C2836442"),
+    "C1": ("Capacitor_SMD", "CP_Elec_6.3x7.7", "100u 35V", 32.75, 9.5, 0, {"1": "VBEC", "2": "GND"}, "C2836442"),
+    "C2": ("Capacitor_SMD", "CP_Elec_6.3x7.7", "100u 35V", 54.75, 9.5, 0, {"1": "VBEC", "2": "GND"}, "C2836442"),
     "R1": ("Resistor_SMD", "R_0805_2012Metric", "1k", 73.6, 11, 0, {"1": "UART_TX", "2": "UART"}, "C17513"),
     "R2": ("Resistor_SMD", "R_0805_2012Metric", "10k", 73.6, 14.6, 0, {"1": "DIAG", "2": "GND"}, "C17414"),
     "D2": ("Diode_SMD", "D_SOD-123", "1N4148W", 73.6, 18.2, 0, {"1": "DIAG", "2": "DIAG0"}, "C81598"),
     "D3": ("Diode_SMD", "D_SOD-123", "1N4148W", 73.6, 21.8, 0, {"1": "DIAG", "2": "DIAG1"}, "C81598"),
-    "D1": ("Diode_SMD", "D_SMA", "SS34", 9, 38.4, 90, {"1": "VM", "2": "VBAT_IN"}, "C8678"),
     # AMS1117: 1 GND, 2 OUT (and tab), 3 IN
     "U4": ("Package_TO_SOT_SMD", "SOT-223-3_TabPin2", "AMS1117-5.0", 27, 52, 0,
            {"1": "GND", "2": "+5V_REG", "3": "VBEC"}, "C6187"),
@@ -151,12 +148,12 @@ def parts_for(variant):
 
 
 # references that need a hand-picked position (absolute mm)
-REF_POS = {"J1": (12.2, 10.0), "JP1": (19.5, 28.4), "JP2": (41.3, 28.4)}
+REF_POS = {"JP1": (19.5, 28.4), "JP2": (41.3, 28.4)}
 
 # name, track width, clearance, nets
 NET_CLASSES = [
-    ("Power", 0.8, 0.25, ["GND", "VM", "VBAT_IN"] + [f"M{n}_{c}" for n in (0, 1) for c in ("1A", "1B", "2A", "2B")]),
-    ("Supply", 0.5, 0.2, ["VBEC", "+5V", "+5V_REG", "+3V3"]),
+    ("Power", 0.8, 0.25, ["GND", "VBEC"] + [f"M{n}_{c}" for n in (0, 1) for c in ("1A", "1B", "2A", "2B")]),
+    ("Supply", 0.5, 0.2, ["+5V", "+5V_REG", "+3V3"]),
 ]
 DEFAULT_TRACK = 0.3
 DEFAULT_CLEARANCE = 0.2
@@ -178,9 +175,6 @@ SILK = [
     ("5", 17.6, 23.6, 0.8, 0),
     ("4", 17.6, 26.2, 0.8, 0),
     ("UART", 41.3, 21.2, 0.8, 0),
-    ("BAT+", 12.2, 22, 0.8, -1),
-    ("BAT-", 12.2, 16.9, 0.8, -1),
-    ("2-3S", 12.2, 13.2, 0.8, -1),
     ("S + -", 68.54, 61.2, 0.8, 0),
     ("S + -", 78.54, 61.2, 0.8, 0),
     ("RC LIFT", 68.54, 54.6, 0.8, 0),
@@ -296,6 +290,7 @@ def place(board_path, dsn_path, variant="tht"):
         return nets[name]
 
     for ref, lib, name, value, x, y, rot, pad_nets, lcsc in parts:
+        x -= X_OFFSET
         fp = pcbnew.FootprintLoad(os.path.join(FP_DIR, lib + ".pretty"), name)
         if fp is None:
             sys.exit(f"footprint not found: {lib}:{name}")
@@ -331,9 +326,8 @@ def place(board_path, dsn_path, variant="tht"):
             ref_text.SetTextThickness(mm(0.12))
             ref_text.SetTextAngleDegrees(rot)
         if ref in REF_POS:
-            fp.Reference().SetPosition(pos(*REF_POS[ref]))
+            fp.Reference().SetPosition(pos(REF_POS[ref][0] - X_OFFSET, REF_POS[ref][1]))
             fp.Reference().SetTextAngleDegrees(0)
-            fp.Reference().SetHorizJustify(pcbnew.GR_TEXT_H_ALIGN_LEFT if ref == "J1" else pcbnew.GR_TEXT_H_ALIGN_CENTER)
         for pad in pads:
             n = pad_nets.get(pad.GetNumber())
             if n:
@@ -357,13 +351,13 @@ def place(board_path, dsn_path, variant="tht"):
 
     # ESP pin names next to the sockets
     for i, p in enumerate(ESP_LEFT):
-        add_text(board, ESP_LABELS.get(p, p.replace("GPIO", "")), 66 - 2.2, 8 + i * 2.54, 0.8, 1)
+        add_text(board, ESP_LABELS.get(p, p.replace("GPIO", "")), 66 - X_OFFSET - 2.2, 8 + i * 2.54, 0.8, 1)
     for i, p in enumerate(ESP_RIGHT):
-        add_text(board, ESP_LABELS.get(p, p.replace("GPIO", "")), 66 + ESP_ROW_SPACING + 2.2, 8 + i * 2.54, 0.8, -1)
-    for text, *args in SILK:
+        add_text(board, ESP_LABELS.get(p, p.replace("GPIO", "")), 66 - X_OFFSET + ESP_ROW_SPACING + 2.2, 8 + i * 2.54, 0.8, -1)
+    for text, x, *args in SILK:
         if variant == "smd" and text.startswith("RC CRANE CARRIER"):
             text += " SMD"
-        add_text(board, text, *args)
+        add_text(board, text, x - X_OFFSET, *args)
 
     board.Save(board_path)
     write_project_rules(board_path)
