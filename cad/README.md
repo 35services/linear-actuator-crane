@@ -1,0 +1,74 @@
+# CAD
+
+OpenSCAD sources for the RC crane and the enclosed linear actuator. Every image and STL
+in this folder is generated from the `.scad` files by [`render.sh`](render.sh). The
+[Render CAD](../.github/workflows/render-cad.yml) GitHub Action re‑runs it on every push
+that changes the CAD and commits the updated files, so they always match the sources.
+
+| File | What it is |
+|------|------------|
+| [`crane.scad`](crane.scad) | Concept model: RC vehicle, turntable, telescopic boom, lift and telescope actuators. Not printable, used to check the geometry |
+| [`actuator_housing.scad`](actuator_housing.scad) | 3D printable enclosure that turns the 15 mm mini stepper slider into an enclosed ram actuator |
+| [`stl/`](stl) | Printable parts, already turned for printing |
+| [`renders/`](renders) | The images below |
+| [`render.sh`](render.sh) | Regenerates `stl/` and `renders/` |
+
+---
+
+## Crane concept – `crane.scad`
+
+![crane overview](renders/crane.png)
+
+| Boom down, telescope in | Boom up 55°, telescope out |
+|---|---|
+| ![crane retracted](renders/crane_side_retracted.png) | ![crane extended](renders/crane_side_extended.png) |
+
+* **Lift actuator:** sits between the mast plates and raises the boom through a pushrod.
+* **Telescope actuator:** lies on top of the boom and pushes the inner section through a
+  slot in the outer tube.
+* **Console output:** the stroke the lift geometry needs, the reach, and the tip‑force
+  ratio for the current pose.
+* **Animation:** View → Animate (FPS 10, Steps 60) moves both axes together.
+
+---
+
+## Enclosed actuator – `actuator_housing.scad`
+
+![housing section](renders/actuator_housing_section.png)
+
+| Side section, ram half out | Fully extended, lid on |
+|---|---|
+| ![housing side](renders/actuator_housing_side.png) | ![housing extended](renders/actuator_housing_extended.png) |
+
+* **Tray:** holds the motor in a cradle. The frame sits on a rib along the floor.
+* **Ram:** slides around the frame. The slider's tab sits in a slot in the ram's ceiling,
+  and a 1.75 mm filament pin behind the tab pulls the ram back in.
+* **Mounting:** both ends take an M3 heat‑set insert for RC ball links.
+
+**Printable parts** (as exported, no supports needed):
+
+| Tray | Lid | Ram |
+|---|---|---|
+| ![tray](renders/actuator_tray.png) | ![lid](renders/actuator_lid.png) | ![ram](renders/actuator_ram.png) |
+| [`actuator_tray.stl`](stl/actuator_tray.stl) | [`actuator_lid.stl`](stl/actuator_lid.stl) | [`actuator_ram.stl`](stl/actuator_ram.stl) |
+| floor down | flat side down | on its side, layers along the length |
+
+The parts list, assembly steps and the dimensions to measure are in the
+[main README](../README.md#enclosed-actuator-housing-3d-printed).
+
+---
+
+## Regenerating locally
+
+```bash
+./cad/render.sh
+```
+
+This needs OpenSCAD 2021.01 or newer and `python3`. STL triangles are sorted after export,
+so unchanged geometry produces byte‑identical files and git only shows real changes.
+
+To export a single part by hand:
+
+```bash
+openscad -o ram.stl -D 'part="ram"' cad/actuator_housing.scad
+```

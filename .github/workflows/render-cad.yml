@@ -1,0 +1,63 @@
+name: Render CAD
+
+# Regenerates cad/stl/*.stl and cad/renders/*.png from the OpenSCAD sources.
+# On main the results are committed back; on pull requests they are only
+# uploaded as an artifact so you can check them before merging.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "cad/**.scad"
+      - "cad/render.sh"
+      - ".github/workflows/render-cad.yml"
+  pull_request:
+    paths:
+      - "cad/**.scad"
+      - "cad/render.sh"
+      - ".github/workflows/render-cad.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: render-cad-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OpenSCAD
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends openscad xvfb xauth fonts-liberation
+          openscad --version
+
+      # PNG export needs an OpenGL context, xvfb provides a virtual display
+      - name: Render STLs and previews
+        run: xvfb-run -a ./cad/render.sh
+
+      - name: Upload renders
+        uses: actions/upload-artifact@v4
+        with:
+          name: cad-renders
+          path: |
+            cad/stl/
+            cad/renders/
+
+      - name: Commit updated renders
+        if: github.event_name != 'pull_request'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add cad/stl cad/renders
+          if git diff --cached --quiet; then
+            echo "Renders are up to date"
+          else
+            git commit -m "Update CAD renders"
+            git push
+          fi

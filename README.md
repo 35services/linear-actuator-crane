@@ -1,5 +1,12 @@
 # RC Crane – Stepper Linear Actuator Controller
 
+[![Render CAD](https://github.com/35services/linear-actuator-crane/actions/workflows/render-cad.yml/badge.svg)](https://github.com/35services/linear-actuator-crane/actions/workflows/render-cad.yml)
+
+![crane concept](cad/renders/crane.png)
+
+**All CAD renderings and printable STLs:** [`cad/`](cad/README.md). The concept sketch
+that started it is [`gemini.jpeg`](gemini.jpeg).
+
 Drive two mini stepper‑motor linear actuators (2‑phase, 4‑wire, lead screw + slider) from
 normal RC receiver channels to work a crane on an RC model vehicle:
 
@@ -258,7 +265,7 @@ Each actuator connects to its driver exactly as before: one coil on `1A/1B`, the
 turntable, mast plates, telescopic boom, counterweight, hook, the lift actuator under the
 boom and the telescope actuator on top.
 
-![crane concept](cad/crane.png)
+![crane concept](cad/renders/crane.png)
 
 * Use **View → Animate** (FPS 10, Steps 60) to sweep the boom between `boom_min` and
   `boom_max` while the telescope extends and retracts.
@@ -282,8 +289,8 @@ boom and the telescope actuator on top.
 enclosed actuator, like a small electric cylinder: a fixed housing, and a **ram** that
 slides in and out at the front. Ready‑to‑print STLs are in [`cad/stl/`](cad/stl).
 
-![housing section](cad/actuator_housing_section.png)
-![housing extended](cad/actuator_housing_extended.png)
+![housing section](cad/renders/actuator_housing_section.png)
+![housing extended](cad/renders/actuator_housing_extended.png)
 
 Dimensions come from the product photo: motor Ø15 × 12.5 mm, 90 mm frame, 104 mm overall,
 Ø2.9 mm (M3) lead screw. With about 75 mm of slider travel:
