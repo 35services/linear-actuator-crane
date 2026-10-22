@@ -69,16 +69,23 @@ Features:
 | 1 | **2** | Mini stepper linear actuator (the AliExpress part) | 2‑phase, 4‑wire. Note the **step angle** (often 18° = 20 steps/rev), **screw lead** (often M3 = 0.5 mm) and **stroke** | 2 × €11 |
 | 2 | 1 | **ESP32‑C3 SuperMini** (or Seeed XIAO ESP32‑C3) | Tiny, 3.3 V logic, USB‑C | €3 |
 | 3 | **2** | **TMC2209 stepper driver module** (BigTreeTech v1.3, FYSETC or similar, *UART version*) | Quiet (StealthChop), current set over UART, **StallGuard for sensorless homing**, 4.75–29 V | 2 × €4 |
-| 4 | **2** | Electrolytic capacitor **100 µF, ≥ 25 V** | One across each driver's VM/GND, close to the module. **Required.** | €0.40 |
+| 4 | **2** | Electrolytic capacitor **100 µF, ≥ 25 V** (35 V recommended) | One across each driver's VM/GND, close to the module. **Required.** | €0.40 |
 | 5 | 1 | Resistor **1 kΩ** | Single‑wire UART (between TX and the shared PDN_UART line) | – |
 | 6 | 2 | Diode **1N4148** (or any small signal diode) | OR both `DIAG` outputs onto one GPIO | – |
 | 7 | 1 | Resistor **10 kΩ** | Pull‑down on the shared `DIAG` line | – |
-| 8 | 2 | Resistors **1 kΩ + 2 kΩ** per channel (optional) | Voltage divider, only if your receiver outputs 5 V signals | – |
-| 9 | 1 | Mini buck converter 5 V (MP1584 / Mini‑360) (optional) | Only if your BEC isn't 5.0–5.5 V. See [Power](#4-power) | €1 |
-| 10 | 2 | Servo extension lead | Receiver channels → ESP32 | €2 |
-| 11 | 1 | Inline fuse 2 A (optional) | In the battery line to the drivers | €1 |
-| 12 | 1 set | Nesting square tubes (aluminium/brass, e.g. 16×12 and 11×7 mm) | Telescopic boom. See [Mechanics](#5-mechanics) | €5 |
-| 13 | | Perfboard, JST‑XH/Dupont connectors, heat‑shrink | | |
+| 8 | 2 + 2 | Resistor **1 kΩ** + Schottky diode **BAT85** per RC channel | Series resistor + clamp to 3V3, so any receiver signal level (3.3 V, 5 V or the 7.4 V BEC rail) is safe | – |
+| 9 | 1 | **LM2940CT‑5.0** low‑dropout regulator (TO‑220) | 5 V for the ESP32 from the 6 V / 7.4 V BEC rail. See [Power](#4-power) | €1.50 |
+| 10 | 1 + 1 | Capacitors **470 nF** ceramic (LDO input) + **47 µF / 16 V** electrolytic (LDO output) | The LM2940 needs ≥ 22 µF on its output to be stable | – |
+| 11 | 1 | Schottky diode **1N5817** | LDO → ESP32 5V pin. Stops USB from back‑feeding the regulator while flashing | – |
+| 12 | 1 | Schottky diode **1N5822** (3 A) | Reverse‑polarity protection in the battery line to the drivers | – |
+| 13 | 2 | Servo extension lead | Receiver channels → board | €2 |
+| 14 | 1 | Inline fuse 2 A (optional) | In the battery line to the drivers | €1 |
+| 15 | 1 set | Nesting square tubes (aluminium/brass, e.g. 16×12 and 11×7 mm) | Telescopic boom. See [Mechanics](#5-mechanics) | €5 |
+| 16 | | Carrier PCB or perfboard, JST‑XH connectors, female pin headers, heat‑shrink | | |
+
+**Vehicle drive (for reference):** Hobbywing **QuicRun Fusion SE** 1800 kV crawler motor/ESC
+combo. It takes 2–3S LiPo (up to 12.6 V) and has a switch‑mode **BEC of 6 V or 7.4 V
+(switchable), 4 A**. The crane electronics are designed for both BEC settings.
 
 ### Why the TMC2209?
 
@@ -97,11 +104,14 @@ Both drivers are wired the same way. The only differences are **STEP/DIR**, the 
 pins** and the **diode on DIAG**.
 
 ```
-                         ┌──────────────────────────────┐
-  2S/3S LiPo  (+) ──fuse─┤                              │
-  7.4–12.6 V             │      vehicle ESC + BEC       ├── BEC 5 V ──► RC receiver (+ / -)
-              (-) ───────┤                              │
-                         └──────────────────────────────┘
+  2S/3S LiPo (+) ──fuse──┬──────────────────► ESC (+)    Hobbywing QuicRun Fusion SE,
+  7.4–12.6 V             │                               BEC 6 V / 7.4 V, 4 A ──► RC receiver
+             (−) ────┬───┼──────────────────► ESC (−)
+                     │   └──►|── 1N5822 (reverse polarity) ──┐
+                     │                                       │
+       ┌─────────────┼───────────────────────────────────────┘
+       │ VM (+)      │ GND (−)
+       │      ┌──────┘
        │ (+)  │ (-)
        ├──────┼────────────────────────────────────────┐
        │      │      100 µF                    │      │      100 µF
@@ -131,14 +141,21 @@ pins** and the **diode on DIAG**.
                         ├──────────────────────► GPIO20 (RX)
                         └──[1 kΩ]──────────────► GPIO21 (TX)
 
-   ┌────────────────────────┐                ┌───────────────────────┐
-   │     ESP32-C3 SuperMini │                │      RC receiver      │
-   │                        │                │                       │
-   │  5V  ◄─────────────────────────────────── + (BEC 5 V)  any CH   │
-   │  GND ◄─────────────────────────────────── −                     │
-   │  GPIO3  ◄─────────(divider if 5 V)──────── S  CH a: boom lift   │
-   │  GPIO10 ◄─────────(divider if 5 V)──────── S  CH b: telescope   │
-   │                        │                └───────────────────────┘
+                         470 nF        47 µF
+                           ┴             ┴
+   BEC + (6/7.4 V) ──► IN ┤ LM2940-5.0 ├ OUT ──►|── 1N5817 ──► SuperMini 5V
+                              │ GND
+                              ┴
+
+   ┌────────────────────────┐                     ┌───────────────────────┐
+   │     ESP32-C3 SuperMini │                     │      RC receiver      │
+   │                        │                     │                       │
+   │  5V  ◄── LM2940 (above)│          BEC + ◄──── + (6 V / 7.4 V)      │
+   │  GND ◄──────────────────────────────────────── −                     │
+   │  GPIO3  ◄──┬──[1 kΩ]──────────────────────────── S  CH a: boom lift   │
+   │            └──►|── 3V3  (BAT85 clamp)         │                       │
+   │  GPIO10 ◄──┬──[1 kΩ]──────────────────────────── S  CH b: telescope   │
+   │            └──►|── 3V3  (BAT85 clamp)         └───────────────────────┘
    └────────────────────────┘
 ```
 
@@ -157,11 +174,11 @@ Each actuator connects to its driver exactly as before: one coil on `1A/1B`, the
 | GPIO7 | ← | DIAG of **both**, through a diode each, plus 10 kΩ to GND | HIGH = stall detected |
 | GPIO21 (TX) | → 1 kΩ → | PDN_UART of **both** | UART write |
 | GPIO20 (RX) | ← | PDN_UART of **both** | UART read (direct) |
-| GPIO3 | ← | receiver CH a signal | boom lift servo PWM in |
-| GPIO10 | ← | receiver CH b signal | telescope servo PWM in |
+| GPIO3 | ← 1 kΩ ← | receiver CH a signal (BAT85 clamp to 3V3) | boom lift servo PWM in |
+| GPIO10 | ← 1 kΩ ← | receiver CH b signal (BAT85 clamp to 3V3) | telescope servo PWM in |
 | 3V3 | → | VIO of both, MS1 of #1 | logic supply / address |
 | GND | – | GND of both drivers (logic side) | **common ground** |
-| 5V | ← | receiver + (BEC) | ESP32 supply |
+| 5V | ← 1N5817 ← | LM2940‑5.0 output (input: BEC + from the receiver) | ESP32 supply |
 
 ### Wiring gotchas
 
@@ -180,9 +197,13 @@ Each actuator connects to its driver exactly as before: one coil on `1A/1B`, the
   * Some clones need a solder bridge to connect PDN to the header pin. Check the module's
     pinout.
 * **All grounds are common:** battery −, ESC/BEC −, receiver −, ESP32 GND, both TMC2209 GNDs.
-* **Receiver signal level:** most modern receivers output 3.3 V, so a direct connection is
-  fine. If yours outputs 5 V, use a divider on each channel: signal → 1 kΩ → GPIO → 2 kΩ →
-  GND.
+* **Receiver signal level:** most receivers output 3.3 V signals, but some put out the
+  servo rail voltage (up to 7.4 V with this BEC). The ESP32 isn't 5 V tolerant, so each
+  channel has a 1 kΩ series resistor and a BAT85 Schottky diode from the GPIO to 3V3
+  (cathode, the band, to 3V3). Anything above about 3.6 V is clamped, with at most about
+  4 mA flowing into the 3V3 rail. This works with every receiver and needs no jumper.
+* **Never connect the BEC + to the SuperMini's 5V pin directly.** At 6 V the onboard
+  regulator is already at its limit, and 7.4 V destroys it. Always go through the LM2940.
 * **Strapping pins:** GPIO2, 8 and 9 on the C3 are strapping pins and are avoided. GPIO0/1
   are normal GPIOs on the SuperMini.
 
@@ -190,16 +211,28 @@ Each actuator connects to its driver exactly as before: one coil on `1A/1B`, the
 
 ## 4. Power
 
-* **Motors (TMC2209 VM):** both drivers straight from the drive battery (2S/3S LiPo).
+* **Motors (TMC2209 VM):** both drivers from the drive battery (2S/3S LiPo, up to
+  12.6 V), through the 1N5822 reverse‑polarity diode.
   * A "5 V" mini stepper is fine on 8–12 V. The TMC2209 limits the **current**, and the
     higher voltage gives more torque at speed.
   * Set the current per axis in firmware (the `run` column in `AXES`). Rule of thumb:
     `I = rated voltage / coil resistance`. Example: 5 V / 15 Ω ≈ 330 mA → use about 300 mA.
-* **ESP32:** from the receiver's BEC rail (any free channel's + pin), **if the BEC gives
-  5.0–5.5 V**. Many BECs default to 6 V or more. In that case, use a small 5 V buck
-  converter from the battery.
-* The ESP32 plus idle drivers draw about 30–60 mA. With both actuators moving, expect about
-  0.6–1 A from the battery.
+* **ESP32:** from the ESC's BEC (Hobbywing QuicRun Fusion SE: **6 V or 7.4 V, 4 A**)
+  through an **LM2940‑5.0** regulator.
+  * **Why not straight from the BEC?** The SuperMini's 5V pin feeds a small 3.3 V regulator
+    that is only rated to about 6 V, and the BEC can be switched to 7.4 V. Current isn't
+    the issue: the ESP32 and the drivers' logic draw well under 100 mA (Wi‑Fi peaks about
+    350 mA), and the BEC has 4 A.
+  * The LM2940 is a low‑dropout regulator (about 0.5 V). It still delivers a clean 5 V from
+    the 6 V setting, and it's rated up to 26 V. At 7.4 V it dissipates only about 0.25 W.
+  * It **needs ≥ 22 µF** on its output (47 µF electrolytic) and 470 nF on its input.
+  * The **1N5817** after the regulator stops the SuperMini's USB 5 V from back‑feeding the
+    LM2940 while you flash it with the battery unplugged. The SuperMini still gets about
+    4.7 V, plenty for its own 3.3 V regulator.
+* **Both BEC settings work.** 7.4 V is the better choice for the servos. The crane
+  electronics don't care which one you use.
+* The ESP32 plus idle drivers draw about 30–60 mA from the BEC. With both actuators moving,
+  expect about 0.6–1 A from the battery through the VM rail.
 
 ---
 
