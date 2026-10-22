@@ -9,6 +9,7 @@ that changes the CAD and commits the updated files, so they always match the sou
 |------|------------|
 | [`crane.scad`](crane.scad) | Concept model: RC vehicle, turntable, telescopic boom, lift and telescope actuators. Not printable, used to check the geometry |
 | [`actuator_housing.scad`](actuator_housing.scad) | 3D printable enclosure that turns the 15 mm mini stepper slider into an enclosed ram actuator |
+| [`diag_wire_example.scad`](diag_wire_example.scad) | Illustration: the DIAG jumper wire from a TMC2209 module to the carrier PCB |
 | [`stl/`](stl) | Printable parts, already turned for printing |
 | [`renders/`](renders) | The images below |
 | [`render.sh`](render.sh) | Regenerates `stl/` and `renders/` |
@@ -55,6 +56,23 @@ that changes the CAD and commits the updated files, so they always match the sou
 
 The parts list, assembly steps and the dimensions to measure are in the
 [main README](../README.md#enclosed-actuator-housing-3d-printed).
+
+---
+
+## DIAG jumper wire – `diag_wire_example.scad`
+
+![DIAG wire](renders/diag_wire_example.png)
+
+* **What DIAG is:** the TMC2209 pulls its DIAG pin high when the motor stalls. That's how
+  homing works without end switches.
+* **Why a wire:** DIAG isn't one of the 16 socket pins. On most modules it's a separate pin
+  on the board, and its position differs between brands.
+* **How:** a short female‑to‑male Dupont jumper connects it to the single socket next to the
+  driver:
+  * driver #0 (lift) → **J12**
+  * driver #1 (telescope) → **J13**
+
+The module here is a generic mock. Its pot (VREF) is unused with UART current control.
 
 ---
 

@@ -51,6 +51,9 @@ for part in tray lid ram; do
   png actuator_housing.scad "actuator_$part.png" 60,0,8,55,0,330,280 -D "part=\"$part\""
 done
 
+# --- DIAG wire illustration for the carrier PCB
+png diag_wire_example.scad diag_wire_example.png 16,-18,18,62,0,300,125
+
 # --- crane concept
 png crane.scad crane.png                  40,0,80,60,0,40,820   -D boom_angle=30 -D tele_ext=25
 png crane.scad crane_side_retracted.png   50,0,135,90,0,0,760   -D boom_angle=0  -D tele_ext=0  -D slew_angle=0 --projection=o

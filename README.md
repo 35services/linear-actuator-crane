@@ -189,8 +189,22 @@ Each actuator connects to its driver exactly as before: one coil on `1A/1B`, the
 * **Driver addresses:** #0 has MS1 = MS2 = GND (address 0). #1 has **MS1 = 3V3**,
   MS2 = GND (address 1). If both drivers have the same address, the UART check at boot
   fails for one of them.
-* **DIAG diodes:** anode at the driver's DIAG pin, cathode (the band) toward GPIO7. The
-  10 kΩ pull‑down holds the line low when neither driver signals a stall.
+* **DIAG – the stall signal for homing without end switches.** The TMC2209 pulls its DIAG
+  pin high when the motor stalls (StallGuard).
+  * **During homing:** the ESP32 watches GPIO7 and stops the actuator the moment it hits the
+    end of travel.
+  * **One GPIO for both drivers:** each DIAG goes through a diode (anode at DIAG, cathode
+    (the band) toward GPIO7), and a 10 kΩ pull‑down holds the line low when neither driver
+    signals a stall. The firmware only enables the stall output on the axis that is
+    homing, so it always knows which one stalled.
+  * **It needs a wire:** DIAG is **not** one of the 16 StepStick socket pins. On most
+    modules it's a separate pin, and its position differs between brands. On the carrier
+    PCB, run a short female‑to‑male Dupont jumper from the module's DIAG pin to the
+    single socket next to the driver: **J12** for the lift, **J13** for the telescope.
+  * **Without the wires:** set `USE_STALLGUARD false`, and homing drives into the end stop
+    at low current instead.
+
+  ![DIAG jumper wire](cad/renders/diag_wire_example.png)
 * **Find the coil pairs** with a multimeter. The two wires that show resistance between them
   (typically 5–30 Ω) are one coil. If an actuator moves the wrong way, swap the two wires of
   **one** coil, or flip that axis's `invert` flag in the firmware.

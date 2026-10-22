@@ -123,9 +123,13 @@ output.
 
 ## Notes for both variants
 
-* **DIAG:** the DIAG pin isn't part of the 16‑pin StepStick layout. Run a short jumper wire
-  from the module's DIAG pin to J12 / J13. You don't need it if you set
-  `USE_STALLGUARD false`.
+* **DIAG:** the TMC2209 pulls DIAG high when the motor stalls, which is used for homing
+  without end switches.
+  * The DIAG pin isn't part of the 16‑pin StepStick layout. Run a short female‑to‑male
+    Dupont jumper from the module's DIAG pin to J12 (driver #0) or J13 (driver #1).
+  * You don't need the wires if you set `USE_STALLGUARD false`.
+
+  ![DIAG wire](../cad/renders/diag_wire_example.png)
 * **Power:** there is no battery input. Everything runs from the ESC's BEC (Hobbywing
   QuicRun Fusion SE: 6 V / 7.4 V, 4 A). It arrives through the `+` pin of the RC headers,
   because the receiver passes it through.
