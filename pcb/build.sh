@@ -71,6 +71,14 @@ build() {  # build <variant> <dir> <board name> [outputs]
   done
   "$KICAD_CLI" pcb render --side top --perspective --rotate "-35,0,25" --zoom 0.9 --quality high \
     --width 1600 --height 1100 --background opaque -o "$dir/renders/board_3d.png" "$BOARD" >/dev/null
+  "$KICAD_CLI" pcb render --side bottom --perspective --rotate "35,0,-25" --zoom 0.9 --quality high \
+    --width 1600 --height 1100 --background opaque -o "$dir/renders/board_3d_bottom.png" "$BOARD" >/dev/null
+
+  # layout drawings (GitHub shows SVG directly)
+  "$KICAD_CLI" pcb export svg --mode-single --fit-page-to-board --exclude-drawing-sheet \
+    --layers F.Cu,F.Silkscreen,Edge.Cuts -o "$dir/renders/layout_front.svg" "$BOARD" >/dev/null
+  "$KICAD_CLI" pcb export svg --mode-single --fit-page-to-board --exclude-drawing-sheet --mirror \
+    --layers B.Cu,B.Silkscreen,Edge.Cuts -o "$dir/renders/layout_back.svg" "$BOARD" >/dev/null
 
   echo "Done: $dir/fab/$name-gerbers.zip, $dir/renders/, $dir/bom.csv"
 }

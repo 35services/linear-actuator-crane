@@ -4,8 +4,9 @@
 
 ![crane concept](cad/renders/crane.png)
 
-**All CAD renderings and printable STLs:** [`cad/`](cad/README.md). **Carrier PCB with
-Gerbers ready to order:** [`pcb/`](pcb/README.md). The concept sketch
+**All CAD renderings and printable STLs:** [`cad/`](cad/README.md). **Carrier PCB, ready to order:**
+[`pcb/`](pcb/README.md), as a through‑hole version for hand soldering or an SMD version
+assembled by JLCPCB. The concept sketch
 that started it is [`gemini.jpeg`](gemini.jpeg).
 
 Drive two mini stepper‑motor linear actuators (2‑phase, 4‑wire, lead screw + slider) from
