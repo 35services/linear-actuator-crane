@@ -10,7 +10,6 @@ afterwards:
 | J10, J11 | Female header 1×8 – SuperMini socket |
 | U2, U3 | 4 × female header 1×8 – TMC2209 sockets |
 | J12, J13 | Female header 1×1 – DIAG |
-| J1 | Screw terminal 2‑pin 5.08 mm – battery |
 | J2, J3 | JST‑XH 4‑pin B4B‑XH‑A – motors |
 | J4, J5 | Pin header 1×3 – RC channels |
 | JP1, JP2 | Solder jumpers – bridge with a blob of solder, see [UART pin](../README.md#before-you-order-check-these-both-variants) |
@@ -30,7 +29,7 @@ afterwards:
    - side: top
    - type: "Economic" works, since all parts are on one side
    - "Confirm Parts Placement": on
-3. Upload `jlcpcb_bom.csv` and `jlcpcb_cpl.csv`. All 15 SMD parts should match an LCSC part
+3. Upload `jlcpcb_bom.csv` and `jlcpcb_cpl.csv`. All 14 SMD parts should match an LCSC part
    automatically. Check that none show as out of stock.
 4. **Check the placement preview carefully.** KiCad and JLCPCB don't always agree on the
    zero rotation of a footprint, so polarised parts can show up rotated 180° in the
@@ -39,7 +38,7 @@ afterwards:
    | Ref | Polarity mark |
    |---|---|
    | C1, C2 (electrolytic) | `+` mark |
-   | D1–D6 | cathode band (the `K` side / pad 1) |
+   | D2–D6 | cathode band (the `K` side / pad 1) |
    | U4 | tab = OUT, the three pins on the left |
 
    You can rotate parts in the preview. With "Confirm Parts Placement" on, a JLCPCB
@@ -48,11 +47,12 @@ afterwards:
 
 ## After delivery
 
-1. Solder the female headers, then the JST connectors, RC headers and battery terminal.
+1. Solder the female headers, then the JST connectors and RC headers.
 2. Bridge **JP1/JP2** to the UART pin of your driver brand.
 3. **Before plugging in any modules:** connect the BEC to an RC header. Check about 4.6–5 V
    at the SuperMini's 5V socket pin and about 0 V at its 3V3 pin (the 3V3 rail comes from
-   the SuperMini itself). Connect the battery and check VM at the drivers' VM pins.
+   the SuperMini itself). Also check the BEC voltage (6 or 7.4 V) at the drivers' VM pins
+   (top right pin of each driver socket).
 4. Plug in the SuperMini and the drivers. **Never plug or unplug a driver or motor while
    powered.**
 

@@ -1,10 +1,10 @@
 # Carrier PCB
 
-A 90 × 64 mm two‑layer carrier board. The ESP32‑C3 SuperMini and both TMC2209 StepStick
+An 80 × 64 mm two‑layer carrier board. The ESP32‑C3 SuperMini and both TMC2209 StepStick
 drivers plug into female headers. Everything from the
 [wiring diagram](../README.md#3-wiring-diagram) is on the board:
-- the power path for the 6 V / 7.4 V BEC
-- reverse‑polarity protection on the battery input
+- the power path: everything runs from the ESC's 6 V / 7.4 V BEC through the RC headers,
+  with no separate battery input
 - the RC input clamps
 - the stall‑line diodes and the shared UART
 
@@ -16,7 +16,7 @@ There are **two variants with the same layout and connectors**:
 | Gerbers | [`fab/rc-crane-carrier-gerbers.zip`](fab/rc-crane-carrier-gerbers.zip) | [`smd/fab/rc-crane-carrier-smd-gerbers.zip`](smd/fab/rc-crane-carrier-smd-gerbers.zip) |
 | Parts | [`bom.csv`](bom.csv) | [`smd/jlcpcb_bom.csv`](smd/jlcpcb_bom.csv) + [`smd/jlcpcb_cpl.csv`](smd/jlcpcb_cpl.csv) |
 | 5 V regulator | LM2940‑5.0 (TO‑220) | AMS1117‑5.0 (SOT‑223) |
-| You solder | everything | only sockets, headers, JST connectors and the battery terminal |
+| You solder | everything | only sockets, headers and JST connectors |
 | DRC | 0 violations, 0 unconnected | 0 violations, 0 unconnected |
 
 ---
@@ -44,13 +44,11 @@ There are **two variants with the same layout and connectors**:
 | C3 | 1 | 470 nF ceramic, 5 mm pitch | LM2940 input |
 | C4 | 1 | 47 µF 16 V electrolytic, D6.3 mm, 2.5 mm pitch | LM2940 output, needs ≥ 22 µF |
 | U4 | 1 | LM2940CT‑5.0 (TO‑220) | 5 V from the BEC |
-| D1 | 1 | 1N5822 | Reverse polarity, battery → VM |
 | D2, D3 | 2 | 1N4148 | DIAG OR |
 | D4 | 1 | 1N5817 | LDO → SuperMini 5V, blocks USB back‑feed |
 | D5, D6 | 2 | BAT85 | RC signal clamp to 3V3 |
 | R1, R3, R4 | 3 | 1 kΩ | UART TX, RC series resistors |
 | R2 | 1 | 10 kΩ | DIAG pull‑down |
-| J1 | 1 | Screw terminal 2‑pin, 5.08 mm | Battery 2–3S. Wires exit at the board edge |
 | J2, J3 | 2 | JST‑XH 4‑pin (B4B‑XH‑A) | Motors |
 | J4, J5 | 2 | Pin header 1×3 | RC channels |
 
@@ -79,7 +77,6 @@ ordering steps, part numbers and checks are in [`smd/README.md`](smd/README.md).
 | C3 | 10 µF 25 V 0805 | [C15850](https://www.lcsc.com/product-detail/C15850.html) | |
 | C4 | 22 µF 25 V 0805 | [C45783](https://www.lcsc.com/product-detail/C45783.html) | |
 | U4 | AMS1117‑5.0 SOT‑223 | [C6187](https://www.lcsc.com/product-detail/C6187.html) | |
-| D1 | SS34 (3 A, SMA) | [C8678](https://www.lcsc.com/product-detail/C8678.html) | basic |
 | D2, D3 | 1N4148W SOD‑123 | [C81598](https://www.lcsc.com/product-detail/C81598.html) | basic |
 | D4, D5, D6 | B5819W SOD‑123 | [C8598](https://www.lcsc.com/product-detail/C8598.html) | basic |
 | R1, R3, R4 | 1 kΩ 0805 | [C17513](https://www.lcsc.com/product-detail/C17513.html) | basic |
@@ -129,9 +126,17 @@ output.
 * **DIAG:** the DIAG pin isn't part of the 16‑pin StepStick layout. Run a short jumper wire
   from the module's DIAG pin to J12 / J13. You don't need it if you set
   `USE_STALLGUARD false`.
-* **Power:** the battery goes to J1. The BEC arrives through the `+` pin of either RC
-  header, because the receiver passes it through. Both RC headers share `+` and `−`. RC
-  pin order is **`S + −`**, with signal on the square pad.
+* **Power:** there is no battery input. Everything runs from the ESC's BEC (Hobbywing
+  QuicRun Fusion SE: 6 V / 7.4 V, 4 A). It arrives through the `+` pin of the RC headers,
+  because the receiver passes it through.
+  * **Drivers:** VM comes straight from the BEC rail. The TMC2209 works from 4.75 V, and
+    the two small steppers draw only about 0.3–0.6 A together.
+  * **ESP32:** fed through the 5 V regulator.
+  * **Cabling:** both RC headers share `+` and `−`, so plug in both servo leads to spread
+    the current over two cables.
+  * **Header pin order:** **`S + −`**, with signal on the square pad. The `+` pin is in the
+    middle, so a servo plug put on backwards only swaps signal and GND and nothing gets a
+    wrong voltage. That's why there's no reverse‑polarity diode.
 * **Motors:** J2 / J3 are `1A 1B 2A 2B`, with the coil pairs next to each other.
 * **The potentiometer on the TMC2209 module** does nothing in this setup: the firmware sets
   the current over UART and switches VREF off with `I_scale_analog(false)`.

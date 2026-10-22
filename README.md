@@ -79,9 +79,7 @@ Features:
 | 9 | 1 | **LM2940CT‑5.0** low‑dropout regulator (TO‑220) | 5 V for the ESP32 from the 6 V / 7.4 V BEC rail. See [Power](#4-power) | €1.50 |
 | 10 | 1 + 1 | Capacitors **470 nF** ceramic (LDO input) + **47 µF / 16 V** electrolytic (LDO output) | The LM2940 needs ≥ 22 µF on its output to be stable | – |
 | 11 | 1 | Schottky diode **1N5817** | LDO → ESP32 5V pin. Stops USB from back‑feeding the regulator while flashing | – |
-| 12 | 1 | Schottky diode **1N5822** (3 A) | Reverse‑polarity protection in the battery line to the drivers | – |
 | 13 | 2 | Servo extension lead | Receiver channels → board | €2 |
-| 14 | 1 | Inline fuse 2 A (optional) | In the battery line to the drivers | €1 |
 | 15 | 1 set | Nesting square tubes (aluminium/brass, e.g. 16×12 and 11×7 mm) | Telescopic boom. See [Mechanics](#5-mechanics) | €5 |
 | 16 | | [Carrier PCB](pcb/README.md) (or perfboard), JST‑XH connectors, female pin headers, heat‑shrink | | |
 
@@ -111,13 +109,12 @@ Both drivers are wired the same way. The only differences are **STEP/DIR**, the 
 pins** and the **diode on DIAG**.
 
 ```
-  2S/3S LiPo (+) ──fuse──┬──────────────────► ESC (+)    Hobbywing QuicRun Fusion SE,
-  7.4–12.6 V             │                               BEC 6 V / 7.4 V, 4 A ──► RC receiver
-             (−) ────┬───┼──────────────────► ESC (−)
-                     │   └──►|── 1N5822 (reverse polarity) ──┐
-                     │                                       │
-       ┌─────────────┼───────────────────────────────────────┘
-       │ VM (+)      │ GND (−)
+  2S/3S LiPo ──► Hobbywing QuicRun Fusion SE (ESC) ── BEC 6 V / 7.4 V, 4 A ──► RC receiver
+                                                                                  │
+         BEC + / − arrive on the board through the RC servo leads (CH a, CH b) ◄──┘
+                     │
+       ┌─────────────┤
+       │ BEC + (VM)  │ GND (−)
        │      ┌──────┘
        │ (+)  │ (-)
        ├──────┼────────────────────────────────────────┐
@@ -126,7 +123,7 @@ pins** and the **diode on DIAG**.
    ┌───────────────────────────┐           ┌───────────────────────────┐
    │   TMC2209 #0 (boom lift)  │           │   TMC2209 #1 (telescope)  │
    │                           │           │                           │
-   │  VM / GND ◄── battery     │           │  VM / GND ◄── battery     │
+   │  VM / GND ◄── BEC         │           │  VM / GND ◄── BEC         │
    │  1A 1B 2A 2B ──► actuator 1           │  1A 1B 2A 2B ──► actuator 2
    │                           │           │                           │
    │  VIO ◄── 3V3              │           │  VIO ◄── 3V3              │
@@ -203,7 +200,8 @@ Each actuator connects to its driver exactly as before: one coil on `1A/1B`, the
     extra pin header at the top.
   * Some clones need a solder bridge to connect PDN to the header pin. Check the module's
     pinout.
-* **All grounds are common:** battery −, ESC/BEC −, receiver −, ESP32 GND, both TMC2209 GNDs.
+* **All grounds are common:** ESC/BEC −, receiver −, ESP32 GND, both TMC2209 GNDs. With
+  the carrier PCB this happens automatically through the servo leads.
 * **Receiver signal level:** most receivers output 3.3 V signals, but some put out the
   servo rail voltage (up to 7.4 V with this BEC). The ESP32 isn't 5 V tolerant, so each
   channel has a 1 kΩ series resistor and a BAT85 Schottky diode from the GPIO to 3V3
@@ -218,10 +216,16 @@ Each actuator connects to its driver exactly as before: one coil on `1A/1B`, the
 
 ## 4. Power
 
-* **Motors (TMC2209 VM):** both drivers from the drive battery (2S/3S LiPo, up to
-  12.6 V), through the 1N5822 reverse‑polarity diode.
-  * A "5 V" mini stepper is fine on 8–12 V. The TMC2209 limits the **current**, and the
-    higher voltage gives more torque at speed.
+* **Everything runs from the ESC's BEC.** There's no separate battery input. The BEC
+  arrives on the board through the `+`/`−` pins of the RC servo leads.
+* **Motors (TMC2209 VM):** straight from the BEC rail (6 V or 7.4 V).
+  * The TMC2209 works from 4.75 V, and the two small steppers draw only about 0.3–0.6 A
+    together, against the 4 A BEC.
+  * A "5 V" mini stepper is fine at 6–7.4 V. The TMC2209 limits the **current**, so the
+    voltage only adds a little speed headroom.
+  * Plug in **both** RC leads, so the current is shared between two servo cables.
+  * A servo plug put on backwards is harmless: `+` is the middle pin, so only signal and
+    GND swap. That's why there's no reverse‑polarity diode.
   * Set the current per axis in firmware (the `run` column in `AXES`). Rule of thumb:
     `I = rated voltage / coil resistance`. Example: 5 V / 15 Ω ≈ 330 mA → use about 300 mA.
 * **ESP32:** from the ESC's BEC (Hobbywing QuicRun Fusion SE: **6 V or 7.4 V, 4 A**)
@@ -234,12 +238,16 @@ Each actuator connects to its driver exactly as before: one coil on `1A/1B`, the
     the 6 V setting, and it's rated up to 26 V. At 7.4 V it dissipates only about 0.25 W.
   * It **needs ≥ 22 µF** on its output (47 µF electrolytic) and 470 nF on its input.
   * The **1N5817** after the regulator stops the SuperMini's USB 5 V from back‑feeding the
-    LM2940 while you flash it with the battery unplugged. The SuperMini still gets about
+    LM2940 while you flash it with the BEC unplugged. The SuperMini still gets about
     4.7 V, plenty for its own 3.3 V regulator.
 * **Both BEC settings work.** 7.4 V is the better choice for the servos. The crane
   electronics don't care which one you use.
-* The ESP32 plus idle drivers draw about 30–60 mA from the BEC. With both actuators moving,
-  expect about 0.6–1 A from the battery through the VM rail.
+* **Current budget on the BEC:**
+  * ESP32 plus idle drivers: about 30–60 mA.
+  * Both actuators moving: about 0.6–1 A more.
+  * The rest of the 4 A is left for the steering servo. On a crawler with a strong
+    steering servo, keep an eye on BEC overload during simultaneous steering and crane
+    moves.
 
 ---
 
