@@ -13,13 +13,12 @@ All placement and connectivity lives in the tables below. Coordinates in mm,
 KiCad convention: y grows downwards, rotation in degrees counter-clockwise.
 """
 
-import json
 import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-import pcbnew  # noqa: E402
-from generate_pcb import FP_DIR, add_text, mm, pos, write_bom, write_jlcpcb_files, write_project_rules  # noqa: E402
+import board_tools  # noqa: E402
+from board_tools import block_pads  # noqa: E402
 
 BOARD_W = 100
 BOARD_H = 100
@@ -36,7 +35,7 @@ DK_J1 = ["3V3", "3V3", "RST", "4", "5", "6", "7", "15", "16", "17", "18", "8", "
 DK_J3 = ["G", "TX", "RX", "1", "2", "42", "41", "40", "39", "38", "37", "36", "35", "0",
          "45", "48", "47", "21", "20", "19", "G", "G"]
 # no copper under the module's PCB antenna
-ANTENNA_KEEPOUT = (49, DK_J1_Y + 2.5, 63, DK_J3_Y - 2.5)
+KEEPOUTS = [(49, DK_J1_Y + 2.5, 63, DK_J3_Y - 2.5)]
 
 # What each ESP pin connects to (unlisted pins stay unconnected). Kept free: strapping pins
 # 0/3/45/46, USB 19/20, 35-37 (octal PSRAM on N8R8/N16R8), 38 (RGB LED), 43/44 (USB-UART).
@@ -57,6 +56,7 @@ R0805 = ("Resistor_SMD", "R_0805_2012Metric")
 C0805 = ("Capacitor_SMD", "C_0805_2012Metric")
 SOD123 = ("Diode_SMD", "D_SOD-123")
 HDR = "Connector_PinHeader_2.54mm"
+JLCPCB = True
 
 # TMC2209 #n: pad 1 position. Address = MS1 + 2 x MS2 (pads 2, 3).
 DRIVER_X = [9 + 22 * n for n in range(4)]
@@ -67,16 +67,6 @@ OUT_X = 46        # servo outputs: channel 1 signal pin
 OUT_Y = 89.5      # S row, + and - rows below
 RC_X = 74         # RC inputs: channel 1 signal pin
 RC_Y = 5.5
-
-
-def block_pads(cols, signal):
-    """Servo-style header block: rows S, +, -; pad = row * cols + column + 1."""
-    pads = {}
-    for c in range(cols):
-        pads[str(c + 1)] = signal.format(c)
-        pads[str(cols + c + 1)] = "VBEC"
-        pads[str(2 * cols + c + 1)] = "GND"
-    return pads
 
 
 def stepstick_pads(n):
@@ -230,361 +220,12 @@ for n, x in enumerate(DRIVER_X):
         ("4", x - 6.4, DRIVER_Y + 7.3, 0.8, 0),
     ]
 
-
-def add_vertical_text(board, text, x, y, size):
-    t = pcbnew.PCB_TEXT(board)
-    t.SetText(text)
-    t.SetPosition(pos(x, y))
-    t.SetLayer(pcbnew.F_SilkS)
-    t.SetTextSize(pcbnew.VECTOR2I(mm(size), mm(size)))
-    t.SetTextThickness(mm(size * 0.15))
-    t.SetTextAngleDegrees(90)
-    board.Add(t)
-
-
-def setup_net_classes(board):
-    # the autorouter necks tracks down to 75 % next to fine-pitch pads (0.19 mm), fine for any fab
-    board.GetDesignSettings().m_TrackMinWidth = mm(0.15)
-    ns = board.GetDesignSettings().m_NetSettings
-    default = ns.GetDefaultNetclass()
-    default.SetTrackWidth(mm(DEFAULT_TRACK))
-    default.SetClearance(mm(DEFAULT_CLEARANCE))
-    default.SetViaDiameter(mm(0.7))
-    default.SetViaDrill(mm(0.35))
-    for name, width, clearance, nets in NET_CLASSES:
-        nc = pcbnew.NETCLASS(name)
-        nc.SetTrackWidth(mm(width))
-        nc.SetClearance(mm(clearance))
-        nc.SetViaDiameter(mm(1.0))
-        nc.SetViaDrill(mm(0.5))
-        ns.SetNetclass(name, nc)
-        for net in nets:
-            ns.SetNetclassPatternAssignment(net, name)
-    ns.RecomputeEffectiveNetclasses()
-
-
-def header_block(board, cols):
-    """3 x cols pin header block (rows S, +, -), built from KiCad's 1 x cols header."""
-    base = pcbnew.FootprintLoad(os.path.join(FP_DIR, HDR + ".pretty"), f"PinHeader_1x{cols:02d}_P2.54mm_Vertical")
-    fp = pcbnew.FOOTPRINT(board)
-    fp.SetFPID(pcbnew.LIB_ID("rc_crane", f"PinHeader_3x{cols:02d}_P2.54mm"))
-    fp.SetAttributes(pcbnew.FP_THROUGH_HOLE)
-    # in the footprint the pins run along +y; the rows sit at -x so that rotation 90 puts them below row S
-    for row in range(3):
-        for pad in base.Pads():
-            p = pcbnew.PAD(pad)
-            p.SetParent(fp)
-            p.SetNumber(str(row * cols + int(pad.GetNumber())))
-            p.SetFPRelativePosition(pcbnew.VECTOR2I(pad.GetFPRelativePosition().x - mm(2.54 * row),
-                                                    pad.GetFPRelativePosition().y))
-            fp.Add(p)
-        for model in base.Models():
-            m = pcbnew.FP_3DMODEL()
-            m.m_Filename = model.m_Filename
-            m.m_Scale, m.m_Rotation = model.m_Scale, model.m_Rotation
-            m.m_Offset = pcbnew.VECTOR3D(-2.54 * row, 0, 0)
-            fp.Models().append(m)
-    x0, x1, y0, y1 = -2 * 2.54 - 1.27, 1.27, -1.27, (cols - 1) * 2.54 + 1.27
-    for layer, grow, width in ((pcbnew.F_SilkS, 0.11, 0.12), (pcbnew.F_CrtYd, 0.5, 0.05)):
-        r = pcbnew.PCB_SHAPE(fp, pcbnew.SHAPE_T_RECTANGLE)
-        r.SetStart(pcbnew.VECTOR2I(mm(x0 - grow), mm(y0 - grow)))
-        r.SetEnd(pcbnew.VECTOR2I(mm(x1 + grow), mm(y1 + grow)))
-        r.SetLayer(layer)
-        r.SetWidth(mm(width))
-        fp.Add(r)
-    return fp
-
-
-def ground_stub(board, fp, pad_numbers, length=2.2):
-    """Joins the given (adjacent, GND) pads and runs a short track outwards to a via into the
-    ground pour - the pour can't reach pads that sit between other fine-pitch pads."""
-    pads = [p for p in fp.Pads() if p.GetNumber() in pad_numbers]
-    centre = fp.GetPosition()
-    a = pads[0].GetPosition()
-    d = a - centre
-    # outward = along the axis where the pad is furthest from the centre
-    step = pcbnew.VECTOR2I(0, mm(length) if d.y > 0 else -mm(length)) if abs(d.y) > abs(d.x) else \
-        pcbnew.VECTOR2I(mm(length) if d.x > 0 else -mm(length), 0)
-    net = pads[0].GetNet()
-    points = [p.GetPosition() for p in pads] + [a + step]
-    for p0, p1 in zip(points[:-2], points[1:-1]):
-        board.Add(track(board, p0, p1, net))
-    board.Add(track(board, a, a + step, net))
-    via = pcbnew.PCB_VIA(board)
-    via.SetPosition(a + step)
-    via.SetWidth(mm(0.7))
-    via.SetDrill(mm(0.35))
-    via.SetNet(net)
-    board.Add(via)
-
-
-def track(board, p0, p1, net):
-    t = pcbnew.PCB_TRACK(board)
-    t.SetStart(p0)
-    t.SetEnd(p1)
-    t.SetWidth(mm(0.25))
-    t.SetLayer(pcbnew.F_Cu)
-    t.SetNet(net)
-    return t
-
-
-def add_keepout(board, x0, y0, x1, y1):
-    zone = pcbnew.ZONE(board)
-    zone.SetIsRuleArea(True)
-    zone.SetDoNotAllowTracks(True)
-    zone.SetDoNotAllowVias(True)
-    zone.SetDoNotAllowZoneFills(True)
-    zone.SetDoNotAllowPads(False)
-    zone.SetDoNotAllowFootprints(False)
-    zone.SetLayerSet(pcbnew.LSET.AllCuMask())
-    o = zone.Outline()
-    o.NewOutline()
-    for x, y in [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]:
-        o.Append(mm(x), mm(y))
-    board.Add(zone)
-
-
-def place(board_path, dsn_path):
-    board = pcbnew.CreateEmptyBoard()
-    setup_net_classes(board)
-    nets = {}
-
-    def net(name):
-        if name not in nets:
-            item = pcbnew.NETINFO_ITEM(board, name)
-            board.Add(item)
-            nets[name] = item
-        return nets[name]
-
-    for ref, lib, name, value, x, y, rot, pad_nets, lcsc in PARTS:
-        if lib == "rc_crane":  # generated here, not from KiCad's library
-            fp = header_block(board, int(name.split("_")[1].split("x")[1]))
-        else:
-            fp = pcbnew.FootprintLoad(os.path.join(FP_DIR, lib + ".pretty"), name)
-            if fp is None:
-                sys.exit(f"footprint not found: {lib}:{name}")
-            fp.SetFPID(pcbnew.LIB_ID(lib, name))
-        fp.SetReference(ref)
-        fp.SetValue(value)
-        fp.Value().SetVisible(False)
-        fp.SetPosition(pos(x, y))
-        fp.SetOrientationDegrees(rot)
-        board.Add(fp)
-        pads = list(fp.Pads())
-        ref_text = fp.Reference()
-        ref_text.SetTextSize(pcbnew.VECTOR2I(mm(0.8), mm(0.8)))
-        ref_text.SetTextThickness(mm(0.12))
-        if ref in HIDE_REF:
-            ref_text.SetVisible(False)
-        elif lib.endswith("_SMD") or lib == "Jumper":
-            # small parts: reference just beside the pads
-            box = pads[0].GetBoundingBox()
-            for pad in pads[1:]:
-                box.Merge(pad.GetBoundingBox())
-            ref_text.SetTextAngleDegrees(0)
-            if rot % 180 == 0:
-                ref_text.SetHorizJustify(pcbnew.GR_TEXT_H_ALIGN_LEFT)
-                ref_text.SetPosition(pcbnew.VECTOR2I(box.GetRight() + mm(0.6), box.GetCenter().y))
-            else:
-                ref_text.SetPosition(pcbnew.VECTOR2I(box.GetCenter().x, box.GetBottom() + mm(1.0)))
-        elif ref.startswith("U1"):
-            # driver modules have empty space between their pin rows
-            ref_text.SetPosition(pcbnew.VECTOR2I(sum(p.GetPosition().x for p in pads) // len(pads),
-                                                 sum(p.GetPosition().y for p in pads) // len(pads)))
-            ref_text.SetTextAngleDegrees(0)
-        if ref in REF_POS:
-            ref_text.SetPosition(pos(*REF_POS[ref]))
-        for pad in pads:
-            n = pad_nets.get(pad.GetNumber())
-            if n:
-                pad.SetNet(net(n))
-
-    for i, (x, y) in enumerate(HOLES, start=1):
-        fp = pcbnew.FootprintLoad(os.path.join(FP_DIR, "MountingHole.pretty"), "MountingHole_3.2mm_M3")
-        fp.SetFPID(pcbnew.LIB_ID("MountingHole", "MountingHole_3.2mm_M3"))
-        fp.SetReference(f"H{i}")
-        fp.Reference().SetVisible(False)
-        fp.Value().SetVisible(False)
-        fp.SetPosition(pos(x, y))
-        board.Add(fp)
-
-    outline = pcbnew.PCB_SHAPE(board, pcbnew.SHAPE_T_RECTANGLE)
-    outline.SetStart(pos(0, 0))
-    outline.SetEnd(pos(BOARD_W, BOARD_H))
-    outline.SetLayer(pcbnew.Edge_Cuts)
-    outline.SetWidth(mm(0.1))
-    board.Add(outline)
-
-    add_keepout(board, *ANTENNA_KEEPOUT)
-    ground_stub(board, board.FindFootprintByReference("U5"), {"24", "25"})
-
-    # DevKit pin names, vertical, outside the two socket rows
-    for i, p in enumerate(DK_J1):
-        add_vertical_text(board, p, DK_PIN1_X - i * 2.54, DK_J1_Y - 2.6, 0.8)
-    for i, p in enumerate(DK_J3):
-        add_vertical_text(board, p, DK_PIN1_X - i * 2.54, DK_J3_Y + 2.6, 0.8)
-    for text, x, *args in SILK:
-        add_text(board, text, x, *args)
-
-    board.Save(board_path)
-    write_project_rules(board_path)
-    pro_path = os.path.splitext(board_path)[0] + ".kicad_pro"
-    with open(pro_path) as f:
-        pro = json.load(f)
-    pro["board"]["design_settings"].setdefault("rules", {})["min_track_width"] = 0.15
-    with open(pro_path, "w") as f:
-        json.dump(pro, f, indent=2)
-    out_dir = os.path.dirname(os.path.abspath(board_path))
-    write_bom(os.path.join(out_dir, "bom.csv"), PARTS)
-    write_jlcpcb_files(board, out_dir, PARTS)
-    if not pcbnew.ExportSpecctraDSN(board, dsn_path):
-        sys.exit("DSN export failed")
-    print(f"placed {len(PARTS)} parts, {len(nets)} nets -> {board_path}, {dsn_path}")
-
-
-def remove_redundant_vias(board):
-    """The autorouter leaves some vias that only connect tracks on one layer."""
-    ends = {}
-    for t in board.GetTracks():
-        if t.Type() != pcbnew.PCB_VIA_T:
-            for p in (t.GetStart(), t.GetEnd()):
-                ends.setdefault((p.x, p.y, t.GetNetCode()), set()).add(t.GetLayer())
-    removed = 0
-    for v in [t for t in board.GetTracks() if t.Type() == pcbnew.PCB_VIA_T]:
-        p, netcode = v.GetPosition(), v.GetNetCode()
-        if v.GetNetname() != "GND" and len(ends.get((p.x, p.y, netcode), ())) < 2:
-            board.Delete(v)
-            removed += 1
-    return removed
-
-
-def remove_dangling_tracks(board):
-    """Deletes track segments with an end that touches nothing, until there are none left."""
-    pads = [pad for fp in board.GetFootprints() for pad in fp.Pads()]
-    removed = 0
-    while True:
-        tracks = list(board.GetTracks())
-
-        def connected(t, p):
-            for o in tracks:
-                if o is not t and o.GetNetCode() == t.GetNetCode():
-                    if o.Type() == pcbnew.PCB_VIA_T and o.GetPosition() == p:
-                        return True
-                    if o.Type() != pcbnew.PCB_VIA_T and o.GetLayer() == t.GetLayer() and p in (o.GetStart(), o.GetEnd()):
-                        return True
-            return any(pad.GetNetCode() == t.GetNetCode() and pad.IsOnLayer(t.GetLayer()) and pad.HitTest(p)
-                       for pad in pads)
-
-        dangling = [t for t in tracks if t.Type() != pcbnew.PCB_VIA_T
-                    and not (connected(t, t.GetStart()) and connected(t, t.GetEnd()))]
-        if not dangling:
-            return removed
-        for t in dangling:
-            board.Delete(t)
-        removed += len(dangling)
-
-
-def widen_necked_tracks(board, width=0.15):
-    for t in board.GetTracks():
-        if t.Type() != pcbnew.PCB_VIA_T and t.GetWidth() < mm(width):
-            t.SetWidth(mm(width))
-
-
-def dist_to_segment(p, a, b):
-    ax, ay, bx, by, px, py = a.x, a.y, b.x, b.y, p[0], p[1]
-    dx, dy = bx - ax, by - ay
-    if dx == dy == 0:
-        return ((px - ax) ** 2 + (py - ay) ** 2) ** 0.5
-    u = max(0, min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)))
-    return ((px - ax - u * dx) ** 2 + (py - ay - u * dy) ** 2) ** 0.5
-
-
-def stitch_ground(board, pitch=5.0, via=0.7, drill=0.35, clearance=0.35):
-    """GND vias on a grid wherever there's room, so the top and bottom pours form one net."""
-    gnd = board.FindNet("GND")
-    obstacles = []  # (kind, data, net)
-    for t in board.GetTracks():
-        if t.Type() == pcbnew.PCB_VIA_T:
-            obstacles.append(("circle", (t.GetPosition(), mm(0.5)), t.GetNetCode()))
-        else:
-            obstacles.append(("seg", (t.GetStart(), t.GetEnd(), t.GetWidth() / 2), t.GetNetCode()))
-    for fp in board.GetFootprints():
-        for pad in fp.Pads():
-            obstacles.append(("box", pad.GetBoundingBox(), pad.GetNetCode()))
-    keep = mm(via / 2 + clearance)
-    added = 0
-    x0, y0, x1, y1 = ANTENNA_KEEPOUT
-    y = 2.0
-    while y < BOARD_H - 2:
-        x = 2.0
-        while x < BOARD_W - 2:
-            inside_keepout = x0 - 1 < x < x1 + 1 and y0 - 1 < y < y1 + 1
-            near_hole = any(abs(x - hx) < 4 and abs(y - hy) < 4 for hx, hy in HOLES)
-            pt = (mm(x), mm(y))
-            ok = not inside_keepout and not near_hole
-            for kind, data, netcode in obstacles if ok else ():
-                if kind == "circle":
-                    d = ((pt[0] - data[0].x) ** 2 + (pt[1] - data[0].y) ** 2) ** 0.5 - data[1]
-                elif kind == "seg":
-                    d = dist_to_segment(pt, data[0], data[1]) - data[2]
-                else:
-                    box = data
-                    dx = max(box.GetLeft() - pt[0], 0, pt[0] - box.GetRight())
-                    dy = max(box.GetTop() - pt[1], 0, pt[1] - box.GetBottom())
-                    d = (dx * dx + dy * dy) ** 0.5
-                if d < keep:
-                    ok = False
-                    break
-            if ok:
-                v = pcbnew.PCB_VIA(board)
-                v.SetPosition(pcbnew.VECTOR2I(*pt))
-                v.SetWidth(mm(via))
-                v.SetDrill(mm(drill))
-                v.SetNet(gnd)
-                board.Add(v)
-                obstacles.append(("circle", (v.GetPosition(), mm(via / 2)), gnd.GetNetCode()))
-                added += 1
-            x += pitch
-        y += pitch
-    return added
-
-
-def finish(board_path, ses_path):
-    board = pcbnew.LoadBoard(board_path)
-    if not pcbnew.ImportSpecctraSES(board, ses_path):
-        sys.exit("SES import failed")
-    removed = remove_redundant_vias(board)
-    removed_tracks = remove_dangling_tracks(board)
-    widen_necked_tracks(board)
-    stitched = stitch_ground(board)
-    print(f"removed {removed} redundant vias and {removed_tracks} dead-end tracks, "
-          f"added {stitched} GND stitching vias")
-
-    gnd = board.FindNet("GND")
-    for layer in (pcbnew.F_Cu, pcbnew.B_Cu):
-        zone = pcbnew.ZONE(board)
-        zone.SetLayer(layer)
-        zone.SetNet(gnd)
-        zone.SetLocalClearance(mm(0.25))
-        zone.SetMinThickness(mm(0.2))
-        zone.SetPadConnection(pcbnew.ZONE_CONNECTION_THERMAL)
-        zone.SetThermalReliefGap(mm(0.4))
-        zone.SetThermalReliefSpokeWidth(mm(0.5))
-        o = zone.Outline()
-        o.NewOutline()
-        for x, y in [(0.3, 0.3), (BOARD_W - 0.3, 0.3), (BOARD_W - 0.3, BOARD_H - 0.3), (0.3, BOARD_H - 0.3)]:
-            o.Append(mm(x), mm(y))
-        board.Add(zone)
-
-    pcbnew.ZONE_FILLER(board).Fill(board.Zones())
-    board.Save(board_path)
-    print(f"routed and poured -> {board_path}")
-
+# DevKit pin names, vertical, outside the two socket rows
+VERTICAL_SILK = ([(p, DK_PIN1_X - i * 2.54, DK_J1_Y - 2.6, 0.8) for i, p in enumerate(DK_J1)]
+                 + [(p, DK_PIN1_X - i * 2.54, DK_J3_Y + 2.6, 0.8) for i, p in enumerate(DK_J3)])
+GROUND_STUBS = [("U5", {"24", "25"})]  # PCA9685 A5 + EXTCLK sit between other pins
+BOTTOM_SIDE = set()
+MODELS = {}
 
 if __name__ == "__main__":
-    if sys.argv[1:2] == ["place"] and len(sys.argv) == 4:
-        place(*sys.argv[2:])
-    elif sys.argv[1:2] == ["finish"] and len(sys.argv) == 4:
-        finish(sys.argv[2], sys.argv[3])
-    else:
-        sys.exit(__doc__)
+    board_tools.main(sys.modules[__name__], sys.argv, __doc__)
