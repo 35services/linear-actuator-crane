@@ -1,9 +1,14 @@
 // RC crane controller – boom lift + telescopic extension
 // ESP32-C3 + 2x TMC2209 (shared UART) + 2x mini stepper linear actuator, no end switches.
 // See ../../README.md for wiring and tuning.
+//
+// The values marked [web] are defaults: they can be changed at runtime in the web UI
+// (WiFi "rc-crane-xxxx", http://192.168.4.1) and are then stored in flash.
 
 #include <TMCStepper.h>
 #include <AccelStepper.h>
+#include "settings.h"
+#include "web_ui.h"
 
 // ---------------------------------------------------------------- pins ----
 constexpr int PIN_EN      = 6;   // shared by both drivers, LOW = enabled
@@ -21,10 +26,10 @@ constexpr float STEPS_PER_MM  = FULL_STEPS_PER_REV * MICROSTEPS / SCREW_LEAD_MM;
 constexpr float SOFT_LIMIT_MM = 0.5f;       // stay this far from both ends
 
 // ------------------------------------------------------------- motion ----
-constexpr float MAX_SPEED_MM_S  = 5.0f;     // = 200 full steps/s, slow for first tests. ~20 mm/s
-                                            // (800 full steps/s) is realistic under load, README "Speed"
-constexpr float ACCEL_MM_S2     = 20.0f;
-constexpr float HOME_SPEED_MM_S = 2.0f;
+float maxSpeedMmS  = 5.0f;    // [web] = 200 full steps/s, slow for first tests. ~20 mm/s
+                              // (800 full steps/s) is realistic under load, README "Speed"
+float accelMmS2    = 20.0f;   // [web]
+float homeSpeedMmS = 2.0f;    // [web]
 constexpr float HOME_OVERRUN_MM = 2.0f;     // extra travel beyond stroke when homing
 
 // ------------------------------------------------------------- driver ----
@@ -41,11 +46,16 @@ enum class ControlMode { POSITION, RATE };
 
 constexpr uint16_t RC_MIN_US      = 1000;
 constexpr uint16_t RC_MAX_US      = 2000;
-constexpr float    RC_DEADBAND    = 0.06f;  // rate mode, fraction of half range
+float              rcDeadbandPct  = 6.0f;   // [web] rate mode, % of half the stick range
 constexpr long     POS_HYSTERESIS = (long)(0.1f * STEPS_PER_MM);
 constexpr uint32_t RC_TIMEOUT_MS  = 250;
 
+// --------------------------------------------------------------- WiFi ----
+constexpr const char* WIFI_PASSWORD = "crane-setup";  // min. 8 characters, change it
+float wifiOffMin = 10.0f;     // [web] WiFi off after this many minutes without a client, 0 = never
+
 // --------------------------------------------------------------- axes ----
+// stroke, invert, run/home current, SG threshold and mode are [web] defaults
 struct AxisConfig {
   const char* name;
   int         pinStep;
@@ -108,8 +118,12 @@ class Axis {
       : cfg(cfg),
         driver(&Serial1, R_SENSE, cfg.driverAddr),
         stepper(AccelStepper::DRIVER, cfg.pinStep, cfg.pinDir),
-        posMin((long)(SOFT_LIMIT_MM * STEPS_PER_MM)),
-        posMax((long)((cfg.strokeMm - SOFT_LIMIT_MM) * STEPS_PER_MM)) {
+        strokeMm(cfg.strokeMm),
+        invertDir(cfg.invertDir),
+        runCurrentMa(cfg.runCurrentMa),
+        homeCurrentMa(cfg.homeCurrentMa),
+        stallThreshold(cfg.stallThreshold),
+        mode(cfg.mode == ControlMode::RATE) {
     rc.pin = cfg.pinRc;
   }
 
@@ -117,21 +131,47 @@ class Axis {
   TMC2209Stepper driver;
   AccelStepper stepper;
   RcInput rc;
-  const long posMin;
-  const long posMax;
+  const long posMin = (long)(SOFT_LIMIT_MM * STEPS_PER_MM);
+  long posMax = 0;
   bool rateMoving = false;
+
+  // runtime settings, see addSettings()
+  float strokeMm, invertDir, runCurrentMa, homeCurrentMa, stallThreshold, mode;
+
+  void addSettings(SettingsStore& settings, int index) {
+    String k = "a" + String(index) + "_", g = cfg.name;
+    settings.add(k + "stroke", g, "Stroke", "mm", &strokeMm, 5, 80, 0.5);
+    settings.add(k + "mode", g, "RC control", "", &mode, 0, 1, 1, "position (knob)|rate (stick)");
+    settings.add(k + "run", g, "Run current", "mA", &runCurrentMa, 50, 800, 10);
+    settings.add(k + "home", g, "Homing current", "mA", &homeCurrentMa, 50, 600, 10);
+    settings.add(k + "sg", g, "Stall threshold", "", &stallThreshold, 0, 255, 1);
+    settings.add(k + "invert", g, "Invert direction", "", &invertDir, 0, 1, 1, "no|yes", true);
+  }
+
+  // Applies changed settings while running. The direction only changes on restart,
+  // because the homed position would be mirrored otherwise.
+  void applySettings() {
+    posMax = (long)((strokeMm - SOFT_LIMIT_MM) * STEPS_PER_MM);
+    driver.rms_current(runCurrentMa, 0.3f);
+    driver.SGTHRS(stallThreshold);
+    stepper.setMaxSpeed(maxSpeedMmS * STEPS_PER_MM);
+    stepper.setAcceleration(accelMmS2 * STEPS_PER_MM);
+    if (stepper.targetPosition() > posMax) stepper.moveTo(posMax);
+  }
+
+  bool rateMode() const { return mode > 0.5f; }
 
   void begin() {
     driver.begin();
     driver.toff(4);
     driver.blank_time(24);
     driver.I_scale_analog(false);
-    driver.rms_current(cfg.runCurrentMa, 0.3f);  // 30 % hold current
+    driver.rms_current(runCurrentMa, 0.3f);  // 30 % hold current
     driver.microsteps(MICROSTEPS);
     driver.pwm_autoscale(true);
     driver.en_spreadCycle(false);  // StealthChop: quiet, and required for StallGuard
     driver.TPWMTHRS(0);
-    driver.SGTHRS(cfg.stallThreshold);
+    driver.SGTHRS(stallThreshold);
     setStallOutput(false);         // DIAG is shared, only the homing axis may drive it
 
     uint8_t result = driver.test_connection();
@@ -142,9 +182,8 @@ class Axis {
                     cfg.name, result);
     }
 
-    stepper.setPinsInverted(cfg.invertDir, false, false);
-    stepper.setMaxSpeed(MAX_SPEED_MM_S * STEPS_PER_MM);
-    stepper.setAcceleration(ACCEL_MM_S2 * STEPS_PER_MM);
+    stepper.setPinsInverted(invertDir > 0.5f, false, false);
+    applySettings();
 
     pinMode(cfg.pinRc, INPUT);
     attachInterruptArg(digitalPinToInterrupt(cfg.pinRc), onRcEdge, &rc, CHANGE);
@@ -157,12 +196,12 @@ class Axis {
   // the full stroke plus overrun, at which point we're at the hard stop either way.
   void home() {
     Serial.printf("[%s] Homing...\n", cfg.name);
-    driver.rms_current(cfg.homeCurrentMa, 0.3f);
+    driver.rms_current(homeCurrentMa, 0.3f);
     if (USE_STALLGUARD) setStallOutput(true);
 
     stepper.setCurrentPosition(0);
-    stepper.setSpeed(-HOME_SPEED_MM_S * STEPS_PER_MM);
-    long maxSteps = (long)((cfg.strokeMm + HOME_OVERRUN_MM) * STEPS_PER_MM);
+    stepper.setSpeed(-homeSpeedMmS * STEPS_PER_MM);
+    long maxSteps = (long)((strokeMm + HOME_OVERRUN_MM) * STEPS_PER_MM);
     uint32_t start = millis();
     bool stalled = false;
 
@@ -183,7 +222,7 @@ class Axis {
 
     setStallOutput(false);
     stepper.setCurrentPosition(0);
-    driver.rms_current(cfg.runCurrentMa, 0.3f);
+    driver.rms_current(runCurrentMa, 0.3f);
     stepper.runToNewPosition(posMin);
   }
 
@@ -193,12 +232,12 @@ class Axis {
   }
 
   void updateRate(float stick) {
-    if (fabsf(stick) < RC_DEADBAND) {
+    if (fabsf(stick) < rcDeadbandPct / 100) {
       if (rateMoving) stepper.stop();
       rateMoving = false;
       return;
     }
-    stepper.setMaxSpeed(fabsf(stick) * MAX_SPEED_MM_S * STEPS_PER_MM);
+    stepper.setMaxSpeed(fabsf(stick) * maxSpeedMmS * STEPS_PER_MM);
     stepper.moveTo(stick > 0 ? posMax : posMin);
     rateMoving = true;
   }
@@ -208,7 +247,7 @@ class Axis {
     if (isnan(stick)) {
       // Failsafe: no signal -> stop where we are
       if (stepper.distanceToGo() != 0) stepper.stop();
-    } else if (cfg.mode == ControlMode::POSITION) {
+    } else if (!rateMode()) {
       updatePosition(stick);
     } else {
       updateRate(stick);
@@ -238,8 +277,8 @@ void tuneStallGuard(int index) {
   Axis& axis = axes[index];
   setDriversEnabled(true);
   axis.setStallOutput(true);
-  axis.stepper.setMaxSpeed(HOME_SPEED_MM_S * STEPS_PER_MM);
-  long span = (long)(axis.cfg.strokeMm / 2 * STEPS_PER_MM);
+  axis.stepper.setMaxSpeed(homeSpeedMmS * STEPS_PER_MM);
+  long span = (long)(axis.strokeMm / 2 * STEPS_PER_MM);
   axis.stepper.moveTo(span);
   uint32_t lastPrint = 0;
   while (true) {
@@ -252,6 +291,37 @@ void tuneStallGuard(int index) {
   }
 }
 
+SettingsStore settings;
+
+String statusJson() {
+  String out = "{\"uptime_s\":" + String(millis() / 1000) + ",\"drivers\":\"" + (driversEnabled ? "on" : "off") + "\"";
+  for (Axis& axis : axes) {
+    float stick = readStick(axis.rc);
+    out += ",\"" + String(axis.cfg.name) + "\":{\"pos_mm\":" + String(axis.stepper.currentPosition() / STEPS_PER_MM, 2) +
+           ",\"target_mm\":" + String(axis.stepper.targetPosition() / STEPS_PER_MM, 2) +
+           ",\"rc\":" + (isnan(stick) ? String("\"no signal\"") : String(stick, 2)) + "}";
+  }
+  return out + "}";
+}
+
+WebUi web(settings, statusJson);
+
+void addSettings() {
+  settings.add("speed", "Motion", "Max speed", "mm/s", &maxSpeedMmS, 1, 50, 0.5);
+  settings.add("accel", "Motion", "Acceleration", "mm/s²", &accelMmS2, 5, 500, 5);
+  settings.add("home_speed", "Motion", "Homing speed", "mm/s", &homeSpeedMmS, 0.5, 10, 0.5);
+  settings.add("deadband", "RC", "Stick deadband (rate mode)", "%", &rcDeadbandPct, 0, 30, 1);
+  settings.add("wifi_off", "WiFi", "WiFi off without client after", "min", &wifiOffMin, 0, 120, 1);
+  for (int i = 0; i < NUM_AXES; i++) axes[i].addSettings(settings, i);
+
+  settings.load();
+  settings.onChange = [] {
+    for (Axis& axis : axes) axis.applySettings();
+  };
+  Serial.println("Settings:");
+  settings.print();
+}
+
 void setup() {
   Serial.begin(115200);
   pinMode(PIN_EN, OUTPUT);
@@ -259,6 +329,7 @@ void setup() {
   pinMode(PIN_DIAG, INPUT_PULLDOWN);
   Serial1.begin(115200, SERIAL_8N1, PIN_UART_RX, PIN_UART_TX);
 
+  addSettings();
   for (Axis& axis : axes) axis.begin();
 
   if (TUNE_STALLGUARD >= 0 && TUNE_STALLGUARD < NUM_AXES) tuneStallGuard(TUNE_STALLGUARD);
@@ -266,6 +337,9 @@ void setup() {
   // Retract the telescope first so the boom moves with the shortest lever
   setDriversEnabled(true);
   for (int i = NUM_AXES - 1; i >= 0; i--) axes[i].home();
+
+  String ssid = "rc-crane-" + String((uint32_t)ESP.getEfuseMac() >> 16 & 0xFFFF, HEX);
+  web.begin(ssid, WIFI_PASSWORD, &wifiOffMin);
 }
 
 void loop() {
@@ -286,6 +360,10 @@ void loop() {
     }
     axis.run();
   }
+
+  // the web server only runs while nothing moves: serving a page takes a few ms,
+  // which would make the steppers stutter
+  if (!moving) web.loop();
 
   if (moving) {
     idleSince = millis();

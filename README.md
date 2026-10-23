@@ -483,6 +483,9 @@ works.
 * `TMCStepper` by teemuatlut
 * `AccelStepper` by Mike McCauley
 
+WiFi, the web server and the settings storage (`Preferences`) come with the ESP32 core.
+The sketch folder also has `settings.h` and `web_ui.h`, keep them next to the `.ino`.
+
 ### Configure before first run
 
 Shared mechanics (both actuators are the same model), at the top of the sketch:
@@ -491,7 +494,6 @@ Shared mechanics (both actuators are the same model), at the top of the sketch:
 |----------|---------|-----------------------|
 | `FULL_STEPS_PER_REV` | motor steps/rev (360° / step angle) | 20 (18°) |
 | `SCREW_LEAD_MM` | travel per screw revolution | 0.5 (M3, counted) |
-| `MAX_SPEED_MM_S` | top speed | 5 for first tests, see [Speed](#speed-how-fast-can-it-move) |
 | `MICROSTEPS` | driver microstepping | 16 |
 | `USE_STALLGUARD` | sensorless stop on stall | `true` |
 
@@ -515,6 +517,54 @@ constexpr AxisConfig AXES[] = {
 | `SG` | StallGuard threshold (higher = more sensitive) |
 | `mode` | `POSITION` (knob) or `RATE` (stick) |
 
+`stroke`, `invert`, `run`, `home`, `SG` and `mode` are only the **defaults**. Like the speed,
+they can be changed later in the web page, without flashing.
+
+### Web settings page
+
+The ESP32 opens its own WiFi network. On a phone or laptop:
+
+1. Connect to **`rc-crane-xxxx`** (the end comes from the chip's MAC address). Password:
+   `crane-setup`. Change `WIFI_PASSWORD` in the sketch.
+2. Open **http://192.168.4.1**.
+
+<img src="docs/web_ui.png" alt="web settings page" width="360">
+
+| Group | Settings |
+|---|---|
+| Motion | max speed (default 5 mm/s, see [Speed](#speed-how-fast-can-it-move)), acceleration, homing speed |
+| RC | stick deadband in rate mode |
+| WiFi | minutes without a connected client until WiFi switches off (0 = never) |
+| per axis | stroke, RC control (position / rate), run and homing current, stall threshold, invert direction |
+
+* **Save** applies the values right away and stores them in flash (NVS), so they survive a
+  restart. Changed values are highlighted; each row shows its default. **Defaults** clears
+  the stored values. **Restart + home** restarts the ESP32.
+* **Invert direction** only takes effect after a restart, because the homed position would
+  be mirrored otherwise.
+* **Live** shows uptime, whether the drivers are on, and per axis the position, target and
+  RC stick value (or "no signal"). Useful to check the receiver and the stroke.
+* The values in the sketch (`maxSpeedMmS`, the `AXES` table, …, marked `[web]`) are the
+  defaults. The serial monitor lists all current values at boot, `(changed)` marks the
+  ones from flash.
+* **The page only responds while the crane stands still.** Serving a page takes a few
+  milliseconds, which would make the steppers stutter, so the web server pauses while an
+  axis moves.
+* **WiFi switches off** after 10 minutes without a connected client (configurable), so it
+  doesn't disturb the RC signal timing while you drive. Restart to get it back.
+* **Adding a setting:** make the value a `float` variable and register it in
+  `addSettings()` with one line: key (max. 15 characters), group, label, unit, pointer,
+  min, max, step. Use `"a|b|c"` as options for a list. The page builds itself from that
+  list, and the setting is stored automatically:
+
+  ```cpp
+  settings.add("speed", "Motion", "Max speed", "mm/s", &maxSpeedMmS, 1, 50, 0.5);
+  ```
+
+  If the value has to be passed on to the drivers, do it in `Axis::applySettings()`.
+* The API can also be scripted: `GET /api/settings`, `POST /api/settings` (form fields
+  `key=value`), `POST /api/reset`, `POST /api/restart`, `GET /api/status`.
+
 ### Tuning sensorless homing
 
 Do this once per axis:
@@ -524,7 +574,8 @@ Do this once per axis:
 2. Note the value while moving freely (e.g. 120) and while you block the slider with a
    finger (e.g. 10).
 3. A stall triggers when `SG_RESULT ≤ 2 × SG`. Pick a threshold so that `2 × SG` lies
-   between the two values (e.g. `SG = 30` → triggers at 60), and put it in the `AXES` table.
+   between the two values (e.g. `SG = 30` → triggers at 60). Set it as *Stall threshold*
+   on the [web page](#web-settings-page), or as the default in the `AXES` table.
 4. Set `TUNE_STALLGUARD` back to `-1` and flash again.
 
 > **Honest caveat:** StallGuard needs some back‑EMF to work. Tiny 15–20 mm steppers at slow
@@ -539,6 +590,8 @@ Do this once per axis:
 * **Winch / slewing:** up to 4 TMC2209s can share the UART line (addresses 0–3). The C3 is
   almost out of free pins, though. For a third and fourth axis, switch to an
   **ESP32‑S3 SuperMini/Zero**, which has plenty of GPIOs.
-* **Wi‑Fi tuning page** on the ESP32 for current, speed and threshold.
+* **Smooth stepping while WiFi is busy:** generate the STEP pulses in hardware
+  (FastAccelStepper uses the ESP32's RMT peripheral), so the web page also works while
+  the crane moves.
 * Store the last positions in NVS and skip homing after a clean shutdown. It's risky if
   power drops mid‑move, so homing on every boot is the safe default.
