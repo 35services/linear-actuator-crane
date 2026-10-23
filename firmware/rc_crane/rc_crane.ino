@@ -14,14 +14,15 @@ constexpr int PIN_UART_TX = 21;  // via 1k to PDN_UART of both drivers
 // ------------------------------------------------- actuator mechanics ----
 // CHECK THESE AGAINST YOUR ACTUATORS (both are the same model)
 constexpr int   FULL_STEPS_PER_REV = 20;    // 18 deg motor
-constexpr float SCREW_LEAD_MM      = 0.5f;  // M3 lead screw
+constexpr float SCREW_LEAD_MM      = 0.5f;  // M3 lead screw, 172 turns on 86.6 mm (counted, README "Speed")
 constexpr int   MICROSTEPS         = 16;
 
 constexpr float STEPS_PER_MM  = FULL_STEPS_PER_REV * MICROSTEPS / SCREW_LEAD_MM;
 constexpr float SOFT_LIMIT_MM = 0.5f;       // stay this far from both ends
 
 // ------------------------------------------------------------- motion ----
-constexpr float MAX_SPEED_MM_S  = 5.0f;
+constexpr float MAX_SPEED_MM_S  = 5.0f;     // = 200 full steps/s, slow for first tests. ~20 mm/s
+                                            // (800 full steps/s) is realistic under load, README "Speed"
 constexpr float ACCEL_MM_S2     = 20.0f;
 constexpr float HOME_SPEED_MM_S = 2.0f;
 constexpr float HOME_OVERRUN_MM = 2.0f;     // extra travel beyond stroke when homing
@@ -61,8 +62,8 @@ struct AxisConfig {
 
 constexpr AxisConfig AXES[] = {
   // name         STEP DIR  RC  addr stroke invert  run  home  SG  mode
-  {"boom lift",    4,   5,   3,  0,   30.0f, false, 300, 150, 30, ControlMode::POSITION},
-  {"telescope",    0,   1,  10,  1,   30.0f, false, 300, 150, 30, ControlMode::RATE},
+  {"boom lift",    4,   5,   3,  0,   49.5f, false, 300, 150, 30, ControlMode::POSITION},  // crane.scad: 0..55° needs 49.6 mm
+  {"telescope",    0,   1,  10,  1,   75.0f, false, 300, 150, 30, ControlMode::RATE},      // full actuator stroke
 };
 constexpr int NUM_AXES = sizeof(AXES) / sizeof(AXES[0]);
 

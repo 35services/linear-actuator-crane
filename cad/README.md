@@ -24,11 +24,16 @@ that changes the CAD and commits the updated files, so they always match the sou
 |---|---|
 | ![crane retracted](renders/crane_side_retracted.png) | ![crane extended](renders/crane_side_extended.png) |
 
-* **Lift actuator:** sits between the mast plates and raises the boom through a pushrod.
-* **Telescope actuator:** lies on top of the boom and pushes the inner section through a
-  slot in the outer tube.
-* **Console output:** the stroke the lift geometry needs, the reach, and the tip‑force
-  ratio for the current pose.
+* **Actuators:** both are the enclosed actuator from `actuator_housing.scad` (132.5 mm
+  retracted, 75 mm stroke), included with `use <actuator_housing.scad>`.
+* **Lift actuator:** sits between the mast plates and raises the boom through a short
+  pushrod to a hanger under the boom. 0 → 55° uses 49.6 mm of the stroke.
+* **Telescope actuator:** lies on top of the boom. Its ram pushes a bracket on the front of
+  the inner section, for 75 mm of extension (reach 155–230 mm).
+* **Console output:** the stroke the lift geometry needs, the reach, the tip‑force ratio
+  for the current pose, and the speeds for `step_rate` (full steps/s): at 800 full steps/s
+  the actuator runs 20 mm/s, the boom goes 0 → 55° in 2.5 s. Details in the
+  [main README](../README.md#speed-how-fast-can-it-move).
 * **Animation:** View → Animate (FPS 10, Steps 60) moves both axes together.
 
 ---
@@ -45,6 +50,8 @@ that changes the CAD and commits the updated files, so they always match the sou
 * **Ram:** slides around the frame. The slider's tab sits in a slot in the ram's ceiling,
   and a 1.75 mm filament pin behind the tab pulls the ram back in.
 * **Mounting:** both ends take an M3 heat‑set insert for RC ball links.
+* **Lead screw:** M3, 0.5 mm lead, about 172 turns on 86.6 mm, counted on the
+  [listing photo](../docs/actuator_photo.png). That gives the 75 mm stroke.
 
 **Printable parts** (as exported, no supports needed):
 

@@ -46,7 +46,9 @@ tab_t         = 3;      // (photo) tall tab thickness along x
 tab_w         = 8;      // tab width along y, MEASURE
 tab_top       = 13.4;   // (photo)
 tab_min       = 19;     // tab centre x when fully retracted, MEASURE
-stroke        = 75;     // (photo, approx.) slider travel
+stroke        = 75;     // slider travel: 86.6 mm of thread minus the ~10 mm slider nut
+                        // gives ~76 mm (photo), 75 leaves a little margin
+screw_lead    = 0.5;    // M3 lead screw, single start: 172 turns counted on 86.6 mm (photo)
 
 /* [Print] */
 wall     = 2.5;   // housing walls
@@ -204,6 +206,24 @@ module lid() {
     motor_bore();
     for (x = ear_xs, s = [-1, 1])
       translate([x, s * (out_y + ear_w / 2), lid_z - 1]) cylinder(d = screw_clear, h = wall + 2);
+  }
+}
+
+// ------------------------------------------------- for other models ----
+// The closed actuator (lid on) with the rear insert at x = 0 and the ram at extension e.
+// crane.scad pulls it in with `use <actuator_housing.scad>`.
+
+function act_retracted() = retracted;   // insert to insert, ram fully in
+function act_stroke()    = stroke;
+function act_lead()      = screw_lead;
+function act_width()     = 2 * (out_y + ear_w);
+function act_floor()     = floor_z - wall;  // bottom of the housing below the screw axis
+
+module enclosed_actuator(e) {
+  translate([-rear_end, 0, 0]) {
+    mini_actuator(e);
+    color("tomato") translate([tab_min + e, 0, 0]) ram();
+    color("steelblue") { tray(); lid(); }
   }
 }
 

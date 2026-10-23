@@ -68,7 +68,7 @@ Features:
 
 | # | Qty | Part | Notes | ~Price |
 |---|-----|------|-------|--------|
-| 1 | **2** | Mini stepper linear actuator (the AliExpress part) | 2‑phase, 4‑wire. Note the **step angle** (often 18° = 20 steps/rev), **screw lead** (often M3 = 0.5 mm) and **stroke** | 2 × €11 |
+| 1 | **2** | Mini stepper linear actuator (the AliExpress part) | 2‑phase, 4‑wire. 18° (20 steps/rev), M3 screw with **0.5 mm lead**, **~75 mm stroke** (counted from the listing photo, see [Speed](#speed-how-fast-can-it-move)) | 2 × €11 |
 | 2 | 1 | **ESP32‑C3 SuperMini** (or Seeed XIAO ESP32‑C3) | Tiny, 3.3 V logic, USB‑C | €3 |
 | 3 | **2** | **TMC2209 stepper driver module** (BigTreeTech v1.3, FYSETC or similar, *UART version*) | Quiet (StealthChop), current set over UART, **StallGuard for sensorless homing**, 4.75–29 V | 2 × €4 |
 | 4 | **2** | Electrolytic capacitor **100 µF, ≥ 25 V** (35 V recommended) | One across each driver's VM/GND, close to the module. **Required.** | €0.40 |
@@ -296,14 +296,14 @@ Each actuator connects to its driver exactly as before: one coil on `1A/1B`, the
 ### Telescope: actuator on top of the boom
 
 ```
-            actuator 2 (motor at the back, near the pivot)
-          ┌──■■■■[slider]────────┐
-          │        │  pin through a slot in the top of the outer tube
-   ●══════╪════════╪═════════════════════╗
-   pivot  │  outer │tube  ┌──────────────╫──────────────┐
-          │        └─────►│ inner section║              ├──► tip sheave + hook
-          │               └──────────────╫──────────────┘
-   ●══════╧══════════════════════════════╝
+        actuator 2 (enclosed, motor at the back near the pivot)
+      ┌■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■┬ram┐
+      └───────────────────────────────────┴───┘╮ bracket on the inner section
+   ●═════════════════════════════════════╗     ┃
+   pivot   outer tube      ┌─────────────╫─────┸──┐
+                           │ inner section         ├──► tip sheave + hook
+                           └─────────────╫────────┘
+   ●═════════════════════════════════════╝
 ```
 
 * Use **nesting square tubes** (e.g. 16×12 mm outer, 11×7 mm inner). A little PTFE tape or
@@ -311,11 +311,11 @@ Each actuator connects to its driver exactly as before: one coil on `1A/1B`, the
   tube keeps it from rattling.
 * Mount actuator 2 **flat on top of the outer tube, near the pivot**. That keeps its weight
   close to the pivot, so it barely loads the lift actuator.
-* A pin or small bracket on the slider reaches through a **slot in the top of the outer
-  tube** into the rear end of the inner section. The tubes carry the bending load. The
-  actuator only has to overcome sliding friction plus `load × sin(boom angle)`, which is
-  well within what it can do.
-* **Extension equals the actuator stroke** (e.g. 30 mm). For more reach, use a **2:1 rope
+* The ram pushes a small **bracket on the front end of the inner section**, the part that
+  sticks out of the outer tube. No slot in the outer tube needed. The tubes carry the
+  bending load. The actuator only has to overcome sliding friction plus
+  `load × sin(boom angle)`, which is well within what it can do.
+* **Extension equals the actuator stroke**: 75 mm, reach 155 → 230 mm. For more, use a **2:1 rope
   multiplier**: put a pulley on the slider, anchor the rope to the outer tube, and attach
   the other end to the inner section. The inner section then moves twice as far as the
   slider, at half the force. You'll also need a return spring or a second rope to pull it
@@ -332,18 +332,71 @@ boom and the telescope actuator on top.
 * Use **View → Animate** (FPS 10, Steps 60) to sweep the boom between `boom_min` and
   `boom_max` while the telescope extends and retracts.
 * Set `animate = false` to pose it by hand with `boom_angle` and `tele_ext`.
-* The console prints the **stroke the lift geometry needs** (with the defaults, 28.6 mm of
-  a 30 mm stroke), the **reach** (155–185 mm from pivot to tip) and the **tip‑force ratio**
-  for the current pose. It warns if the stroke isn't enough.
+* Both actuators are the enclosed actuator from
+  [`actuator_housing.scad`](cad/actuator_housing.scad) (132.5 mm long retracted, 75 mm
+  stroke), pulled in with `use <actuator_housing.scad>`.
+* The lift actuator runs from the bottom of the mast to a **hanger 130 mm out and 22 mm below
+  the boom**, so the 32 mm tall housing clears the boom.
+* The console prints the **stroke the lift geometry needs** (with the defaults, 49.6 mm of
+  the 75 mm stroke, plus a 6 mm pushrod), the **reach** (155–230 mm from pivot to tip), the
+  **tip‑force ratio** for the current pose and the [speeds](#speed-how-fast-can-it-move).
+  It warns if the stroke isn't enough or the actuator doesn't fit.
 * Tip force as a fraction of lift actuator force, with the defaults:
 
   | | telescope in | telescope out |
   |---|---|---|
-  | boom level | 26 % | 22 % |
-  | boom at 55° | 11 % | 9 % |
+  | boom level | 42 % | 29 % |
+  | boom at 55° | 22 % | 15 % |
 
 * Change `attach_d`, `pivot_h`, `outer_len`/`inner_len` and the boom range to trade reach
   and lift range against force.
+
+### Speed: how fast can it move?
+
+![actuator from the AliExpress listing](docs/actuator_photo.png)
+
+*Photo from the AliExpress listing. The thread was counted on this image.*
+
+**Lead screw, measured from the photo:**
+
+* The 90 mm dimension line gives the scale: 11.6 px per mm.
+* The thread repeats every 5.78 px (measured along the screw, very regular), so the pitch
+  is **0.50 mm**. Counted crests: 152 visible plus about 20 hidden behind the slider, so
+  **about 172 turns on 86.6 mm** of thread. An M3 × 0.5 single‑start screw, **lead 0.5 mm**.
+* **Travel:** 86.6 mm of thread minus the ~10 mm slider nut is about 76 mm. The CAD and
+  firmware use **75 mm**.
+* With the 18° motor (20 full steps per turn): **0.025 mm per full step**, 3000 full steps
+  for the full stroke.
+
+**Speed** = full steps per second × 0.025 mm. For the crane geometry in
+[`crane.scad`](cad/crane.scad) (boom 0 → 55° needs 49.6 mm of lift stroke, the hook rises
+127 mm with the telescope in):
+
+| Full steps/s | Actuator | Boom 0 → 55° | Telescope 75 mm | Hook rises, average | Like a real crane at 1:8 |
+|---:|---:|---:|---:|---:|---:|
+| 200 (firmware now) | 5 mm/s | 9.9 s | 15 s | 13 mm/s | 0.10 m/s |
+| 400 | 10 mm/s | 5.0 s | 7.5 s | 26 mm/s | 0.20 m/s |
+| 600 | 15 mm/s | 3.3 s | 5.0 s | 38 mm/s | 0.31 m/s |
+| **800** | **20 mm/s** | **2.5 s** | **3.8 s** | **51 mm/s** | **0.41 m/s** |
+| 1200 | 30 mm/s | 1.7 s | 2.5 s | 77 mm/s | 0.61 m/s |
+| 2000 | 50 mm/s | 1.0 s | 1.5 s | 128 mm/s | 1.0 m/s |
+
+* **What's realistic:** the motor sets the limit, not the driver. Tiny 15 mm steppers like
+  this one usually manage roughly 500–1000 full steps/s at 5 V. Torque drops as the speed
+  rises, so under load plan for **600–800 full steps/s (15–20 mm/s)**. 1200 and more only
+  works without load, if at all. That's still quick: the whole boom movement takes about
+  2.5–3.5 s, which is about how fast a real loader crane moves at 1:8.
+* **Find your limit:** raise `MAX_SPEED_MM_S` step by step with a load on the hook until the
+  motor stalls, then use about 70 % of that. The BEC's 7.4 V setting gives a bit more speed
+  than 6 V.
+* **The firmware starts at 5 mm/s** (200 full steps/s) on purpose, for the first tests.
+* **Step rate:** at 16 microsteps, 800 full steps/s is 12 800 STEP pulses/s per axis.
+  AccelStepper on the ESP32‑C3 handles that for two axes. Above about 1000 full steps/s,
+  set `MICROSTEPS` to 8 or 4. The TMC2209 interpolates to 256 microsteps internally, so
+  it stays smooth and quiet.
+* **Force:** the 0.5 mm lead gives a lot of push for a tiny motor, and the screw is
+  self‑locking. The boom holds its position with the drivers off.
+* The console of `crane.scad` prints these numbers for any `step_rate` and pose.
 
 ### Enclosed actuator housing (3D printed)
 
@@ -409,9 +462,10 @@ loose, lower it. If it binds, raise it, or sand the ram and add a little dry PTF
 > against the reference model, so as long as the reference model matches your part, they
 > fit.
 >
-> **Firmware:** this actuator has a lot more stroke than the 30 mm used in the firmware
-> defaults. Set `stroke` in the `AXES` table to your measured travel. Homing doesn't change:
-> it retracts until the slider stops at the motor end. The ram stays 1 mm clear of the motor.
+> **Firmware:** the `AXES` table uses 49.5 mm for the boom lift (what the crane geometry
+> needs for 0 → 55°) and the full 75 mm for the telescope. If you change the crane geometry
+> or measure a different travel, change `stroke` there. Homing retracts until the slider
+> stops at the motor end. The ram stays 1 mm clear of the motor.
 
 ---
 
@@ -436,7 +490,8 @@ Shared mechanics (both actuators are the same model), at the top of the sketch:
 | Constant | Meaning | Typical mini actuator |
 |----------|---------|-----------------------|
 | `FULL_STEPS_PER_REV` | motor steps/rev (360° / step angle) | 20 (18°) |
-| `SCREW_LEAD_MM` | travel per screw revolution | 0.5 (M3) |
+| `SCREW_LEAD_MM` | travel per screw revolution | 0.5 (M3, counted) |
+| `MAX_SPEED_MM_S` | top speed | 5 for first tests, see [Speed](#speed-how-fast-can-it-move) |
 | `MICROSTEPS` | driver microstepping | 16 |
 | `USE_STALLGUARD` | sensorless stop on stall | `true` |
 
@@ -445,8 +500,8 @@ Per axis, in the `AXES` table:
 ```cpp
 constexpr AxisConfig AXES[] = {
   // name         STEP DIR  RC  addr stroke invert  run  home  SG  mode
-  {"boom lift",    4,   5,   3,  0,   30.0f, false, 300, 150, 30, ControlMode::POSITION},
-  {"telescope",    0,   1,  10,  1,   30.0f, false, 300, 150, 30, ControlMode::RATE},
+  {"boom lift",    4,   5,   3,  0,   49.5f, false, 300, 150, 30, ControlMode::POSITION},
+  {"telescope",    0,   1,  10,  1,   75.0f, false, 300, 150, 30, ControlMode::RATE},
 };
 ```
 
