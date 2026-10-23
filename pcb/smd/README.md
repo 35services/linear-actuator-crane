@@ -12,6 +12,7 @@ afterwards:
 | J12, J13 | Female header 1×1 – DIAG |
 | J2, J3 | JST‑XH 4‑pin B4B‑XH‑A – motors |
 | J4, J5 | Pin header 1×3 – RC channels |
+| C1, C2 | 100 µF 35 V electrolytic, D8 mm, 3.5 mm pitch – driver VM buffer, **required**. Mind the `+` mark. THT because the SMD version is a JLCPCB extended part |
 | JP1, JP2 | Solder jumpers – bridge with a blob of solder, see [UART pin](../README.md#before-you-order-check-these-both-variants) |
 
 ## Files
@@ -29,15 +30,15 @@ afterwards:
    - side: top
    - type: "Economic" works, since all parts are on one side
    - "Confirm Parts Placement": on
-3. Upload `jlcpcb_bom.csv` and `jlcpcb_cpl.csv`. All 14 SMD parts should match an LCSC part
-   automatically. Check that none show as out of stock.
+3. Upload `jlcpcb_bom.csv` and `jlcpcb_cpl.csv`. All 12 SMD parts should match an LCSC part
+   automatically. They are all JLCPCB basic parts, so there are no extended‑part fees.
+   Check that none show as out of stock.
 4. **Check the placement preview carefully.** KiCad and JLCPCB don't always agree on the
    zero rotation of a footprint, so polarised parts can show up rotated 180° in the
    preview. Check these against the silkscreen:
 
    | Ref | Polarity mark |
    |---|---|
-   | C1, C2 (electrolytic) | `+` mark |
    | D2–D6 | cathode band (the `K` side / pad 1) |
    | U4 | tab = OUT, the three pins on the left |
 
@@ -47,7 +48,8 @@ afterwards:
 
 ## After delivery
 
-1. Solder the female headers, then the JST connectors and RC headers.
+1. Solder C1/C2 (`+` to the marked pad), then the female headers, the JST connectors and
+   the RC headers.
 2. Bridge **JP1/JP2** to the UART pin of your driver brand.
 3. **Before plugging in any modules:** connect the BEC to an RC header. Check about 4.6–5 V
    at the SuperMini's 5V socket pin and about 0 V at its 3V3 pin (the 3V3 rail comes from

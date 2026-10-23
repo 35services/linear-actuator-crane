@@ -1,5 +1,5 @@
 Qty,References,Value,Footprint,LCSC
-2,"C1 C2","100u 35V","Capacitor_SMD:CP_Elec_6.3x7.7","C2836442"
+2,"C1 C2","100u 35V","Capacitor_THT:CP_Radial_D8.0mm_P3.50mm",""
 1,"C3","10u 25V","Capacitor_SMD:C_0805_2012Metric","C15850"
 1,"C4","22u 25V","Capacitor_SMD:C_0805_2012Metric","C45783"
 2,"D2 D3","1N4148W","Diode_SMD:D_SOD-123","C81598"

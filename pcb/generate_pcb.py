@@ -7,9 +7,9 @@ Run with KiCad's bundled Python (it provides the pcbnew module), see build.sh:
 
 Variants:
     tht  everything through-hole, for hand soldering
-    smd  passives, diodes and the regulator as SMD with LCSC part numbers for JLCPCB
-         assembly; sockets, headers, connectors and the terminal stay through-hole
-         and are hand-soldered
+    smd  small passives, diodes and the regulator as SMD with LCSC part numbers for JLCPCB
+         assembly; sockets, headers, connectors and the two 100 uF capacitors stay
+         through-hole and are hand-soldered
 
 All placement and connectivity lives in the tables below. Coordinates in mm,
 KiCad convention: y grows downwards, rotation in degrees counter-clockwise.
@@ -118,11 +118,11 @@ PARTS = [
 ]
 
 # SMD variant: these parts replace their THT counterparts. Everything not listed here
-# (sockets, headers, JST, terminal, solder jumpers) is kept and hand-soldered.
+# (sockets, headers, JST, solder jumpers) is kept and hand-soldered. All LCSC parts here
+# are JLCPCB basic parts (no extended-part fee); the 100 uF VM capacitors C1/C2 stay
+# THT on purpose, the only SMD option is an extended part. Check with check_jlc_parts.py.
 # ref: library, footprint, value, x, y, rotation, {pad: net}, LCSC part number
 SMD_PARTS = {
-    "C1": ("Capacitor_SMD", "CP_Elec_6.3x7.7", "100u 35V", 32.75, 9.5, 0, {"1": "VBEC", "2": "GND"}, "C2836442"),
-    "C2": ("Capacitor_SMD", "CP_Elec_6.3x7.7", "100u 35V", 54.75, 9.5, 0, {"1": "VBEC", "2": "GND"}, "C2836442"),
     "R1": ("Resistor_SMD", "R_0805_2012Metric", "1k", 73.6, 11, 0, {"1": "UART_TX", "2": "UART"}, "C17513"),
     "R2": ("Resistor_SMD", "R_0805_2012Metric", "10k", 73.6, 14.6, 0, {"1": "DIAG", "2": "GND"}, "C17414"),
     "D2": ("Diode_SMD", "D_SOD-123", "1N4148W", 73.6, 18.2, 0, {"1": "DIAG", "2": "DIAG0"}, "C81598"),

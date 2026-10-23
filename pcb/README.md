@@ -16,7 +16,7 @@ There are **two variants with the same layout and connectors**:
 | Gerbers | [`fab/rc-crane-carrier-gerbers.zip`](fab/rc-crane-carrier-gerbers.zip) | [`smd/fab/rc-crane-carrier-smd-gerbers.zip`](smd/fab/rc-crane-carrier-smd-gerbers.zip) |
 | Parts | [`bom.csv`](bom.csv) | [`smd/jlcpcb_bom.csv`](smd/jlcpcb_bom.csv) + [`smd/jlcpcb_cpl.csv`](smd/jlcpcb_cpl.csv) |
 | 5 V regulator | LM2940‑5.0 (TO‑220) | AMS1117‑5.0 (SOT‑223) |
-| You solder | everything | only sockets, headers and JST connectors |
+| You solder | everything | sockets, headers, JST connectors and the two 100 µF capacitors |
 | DRC | 0 violations, 0 unconnected | 0 violations, 0 unconnected |
 
 ---
@@ -40,7 +40,7 @@ There are **two variants with the same layout and connectors**:
 | J10, J11 | 2 | Female header 1×8, 2.54 mm | SuperMini socket |
 | U2, U3 | 4 | Female header 1×8, 2.54 mm | Two per TMC2209 StepStick |
 | J12, J13 | 2 | Female header 1×1 | DIAG wire from each module, see [notes](#notes-for-both-variants) |
-| C1, C2 | 2 | 100 µF 35 V electrolytic, D8 mm, 3.5 mm pitch | Driver VM buffer, **required** |
+| C1, C2 | 2 | 100 µF 35 V electrolytic, D8 mm, 3.5 mm pitch | Driver VM buffer, **required**. Also hand‑soldered on the SMD variant |
 | C3 | 1 | 470 nF ceramic, 5 mm pitch | LM2940 input |
 | C4 | 1 | 47 µF 16 V electrolytic, D6.3 mm, 2.5 mm pitch | LM2940 output, needs ≥ 22 µF |
 | U4 | 1 | LM2940CT‑5.0 (TO‑220) | 5 V from the BEC |
@@ -68,22 +68,41 @@ Solder **R1, R2, D2 and D3 first**: they sit under the SuperMini. Then the socke
 |---|---|---|
 | ![3d bottom](smd/renders/board_3d_bottom.png) | ![front layout](smd/renders/layout_front.svg) | ![back layout](smd/renders/layout_back.svg) |
 
-JLCPCB places all SMD parts. You only solder the through‑hole connectors afterwards. The
-ordering steps, part numbers and checks are in [`smd/README.md`](smd/README.md).
+JLCPCB places all SMD parts. You solder the through‑hole parts afterwards: the connectors
+and the two 100 µF capacitors C1/C2 (same THT capacitors as the THT variant, see
+[extended parts](#jlcpcb-extended-parts-cost-tracking) for why). The ordering steps, part
+numbers and checks are in [`smd/README.md`](smd/README.md).
 
-| Ref | Part | LCSC | |
+| Ref | Part | LCSC | JLCPCB |
 |-----|------|------|---|
-| C1, C2 | 100 µF 35 V electrolytic, 6.3×7.7 mm | [C2836442](https://www.lcsc.com/product-detail/C2836442.html) | extended |
-| C3 | 10 µF 25 V 0805 | [C15850](https://www.lcsc.com/product-detail/C15850.html) | |
-| C4 | 22 µF 25 V 0805 | [C45783](https://www.lcsc.com/product-detail/C45783.html) | |
-| U4 | AMS1117‑5.0 SOT‑223 | [C6187](https://www.lcsc.com/product-detail/C6187.html) | |
+| C3 | 10 µF 25 V 0805 | [C15850](https://www.lcsc.com/product-detail/C15850.html) | basic |
+| C4 | 22 µF 25 V 0805 | [C45783](https://www.lcsc.com/product-detail/C45783.html) | basic |
+| U4 | AMS1117‑5.0 SOT‑223 | [C6187](https://www.lcsc.com/product-detail/C6187.html) | basic |
 | D2, D3 | 1N4148W SOD‑123 | [C81598](https://www.lcsc.com/product-detail/C81598.html) | basic |
 | D4, D5, D6 | B5819W SOD‑123 | [C8598](https://www.lcsc.com/product-detail/C8598.html) | basic |
 | R1, R3, R4 | 1 kΩ 0805 | [C17513](https://www.lcsc.com/product-detail/C17513.html) | basic |
 | R2 | 10 kΩ 0805 | [C17414](https://www.lcsc.com/product-detail/C17414.html) | basic |
 
-Every part number was checked against its LCSC product page while the board was being
-designed. Stock changes, so JLCPCB shows you current availability when you upload the BOM.
+Every part number was checked against its LCSC product page and JLCPCB's parts library
+while the board was being designed. Stock changes, so JLCPCB shows you current availability
+when you upload the BOM.
+
+### JLCPCB extended parts (cost tracking)
+
+JLCPCB charges a one‑time setup fee of about $3 per **extended** part type per order (basic
+parts have none). This is the list to revisit when the assembly price matters.
+
+| Board | Part | LCSC | Status |
+|---|---|---|---|
+| SMD carrier | 100 µF 35 V electrolytic, 6.3×7.7 mm (C1, C2) | [C2836442](https://www.lcsc.com/product-detail/C2836442.html) | **Dropped:** C1/C2 are now THT and hand‑soldered. The SMD carrier has no extended parts |
+| Advanced board (planned) | PCA9685PW,118, 16‑channel PWM, TSSOP‑28 | [C2678753](https://www.lcsc.com/product-detail/C2678753.html) | **Used:** no basic alternative. Fallback [C92206](https://www.lcsc.com/product-detail/C92206.html) (PCA9685PW/Q900, also extended) |
+
+Check the current status and stock of every part in the JLCPCB BOMs, or of single parts:
+
+```bash
+python3 pcb/check_jlc_parts.py
+python3 pcb/check_jlc_parts.py C2678753 C92206
+```
 
 **Why the AMS1117 instead of the LM2940?** I couldn't verify an SMD LM2940 in JLCPCB's
 library. The AMS1117‑5.0 needs about 1.1 V more input than it outputs, so on the 6 V BEC
