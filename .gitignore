@@ -3,3 +3,4 @@ pcb/.cache/
 pcb/**/*.kicad_prl
 pcb/**/~*.lck
 pcb/*-backups/
+__pycache__/
