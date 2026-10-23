@@ -530,6 +530,15 @@ The ESP32 opens its own WiFi network. On a phone or laptop:
 
 <img src="docs/web_ui.png" alt="web settings page" width="360">
 
+**[Try the page in your browser](https://raw.githack.com/35services/linear-actuator-crane/main/firmware/web_preview/index.html)**,
+no ESP32 needed. [`firmware/web_preview/index.html`](firmware/web_preview/index.html) is the
+real page from `web_ui.h`, with the settings and defaults read from the sketch and a small
+script that pretends to be the ESP32: saving works but nothing is stored, and the live
+values are simulated. You can also open the file locally. It's rebuilt by
+[`build_preview.py`](firmware/web_preview/build_preview.py), and the
+[Web preview](.github/workflows/web-preview.yml) GitHub Action runs it on every firmware
+change, so it always matches the firmware.
+
 | Group | Settings |
 |---|---|
 | Motion | max speed (default 5 mm/s, see [Speed](#speed-how-fast-can-it-move)), acceleration, homing speed |

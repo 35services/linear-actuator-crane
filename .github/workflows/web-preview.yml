@@ -1,0 +1,51 @@
+name: Web preview
+
+# Rebuilds firmware/web_preview/index.html (the settings page with a simulated ESP32)
+# whenever the firmware changes, so the preview always matches the real page.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "firmware/rc_crane/**"
+      - "firmware/web_preview/build_preview.py"
+      - ".github/workflows/web-preview.yml"
+  pull_request:
+    paths:
+      - "firmware/rc_crane/**"
+      - "firmware/web_preview/build_preview.py"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: web-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build preview
+        run: python3 firmware/web_preview/build_preview.py
+
+      - name: Commit updated preview
+        if: github.event_name != 'pull_request'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add firmware/web_preview/index.html
+          if git diff --cached --quiet; then
+            echo "Preview is up to date"
+          else
+            git commit -m "Update web preview"
+            git pull --rebase
+            git push
+          fi
+
+      - name: Fail on a stale preview in a pull request
+        if: github.event_name == 'pull_request'
+        run: git diff --exit-code firmware/web_preview/index.html
