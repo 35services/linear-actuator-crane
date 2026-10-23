@@ -3,12 +3,13 @@
 #   place parts (generate_pcb.py) -> autoroute (Freerouting) -> GND pour -> DRC
 #   -> Gerbers + drill (fab/), renders (renders/)
 #
-# Two variants are built side by side:
-#   tht  pcb/rc-crane-carrier.kicad_pcb          everything through-hole, hand soldered
-#   smd  pcb/smd/rc-crane-carrier-smd.kicad_pcb  SMD parts assembled by JLCPCB, connectors by hand
+# Three boards are built side by side:
+#   tht       pcb/rc-crane-carrier.kicad_pcb                 everything through-hole, hand soldered
+#   smd       pcb/smd/rc-crane-carrier-smd.kicad_pcb         SMD parts assembled by JLCPCB, connectors by hand
+#   advanced  pcb/advanced/rc-crane-advanced.kicad_pcb       ESP32-S3, 4 drivers, 16 PWM outputs (SMD)
 #
 # Needs KiCad 10 and Java 21+. Freerouting is downloaded on first run.
-#   ./pcb/build.sh                 # both variants, full rebuild (re-routes)
+#   ./pcb/build.sh                 # all boards, full rebuild (re-routes)
 #   ./pcb/build.sh smd             # one variant
 #   ./pcb/build.sh smd outputs     # only DRC, fab files and renders from the existing board
 
@@ -45,12 +46,20 @@ build() {  # build <variant> <dir> <board name> [outputs]
     fi
 
     echo "== Place"
-    "$KICAD_PYTHON" generate_pcb.py place "$BOARD" "$CACHE/board.dsn" "$variant"
+    if [[ "$variant" == advanced ]]; then
+      "$KICAD_PYTHON" advanced/generate_advanced.py place "$BOARD" "$CACHE/board.dsn"
+    else
+      "$KICAD_PYTHON" generate_pcb.py place "$BOARD" "$CACHE/board.dsn" "$variant"
+    fi
     echo "== Route"
     java -jar "$JAR" -de "$CACHE/board.dsn" -do "$CACHE/board.ses" -mp 100 2>&1 \
       | grep -E "Auto-routing stage completed" | sed 's/.*final score/final score/'
     echo "== Pour"
-    "$KICAD_PYTHON" generate_pcb.py finish "$BOARD" "$CACHE/board.ses"
+    if [[ "$variant" == advanced ]]; then
+      "$KICAD_PYTHON" advanced/generate_advanced.py finish "$BOARD" "$CACHE/board.ses"
+    else
+      "$KICAD_PYTHON" generate_pcb.py finish "$BOARD" "$CACHE/board.ses"
+    fi
   fi
 
   echo "== DRC"
@@ -83,11 +92,11 @@ build() {  # build <variant> <dir> <board name> [outputs]
   echo "Done: $dir/fab/$name-gerbers.zip, $dir/renders/, $dir/bom.csv"
 }
 
-variants=(tht smd)
+variants=(tht smd advanced)
 mode=all
 for arg in "$@"; do
   case $arg in
-    tht|smd) variants=("$arg") ;;
+    tht|smd|advanced) variants=("$arg") ;;
     outputs) mode=outputs ;;
     *) echo "unknown argument: $arg"; exit 2 ;;
   esac
@@ -96,5 +105,6 @@ for v in "${variants[@]}"; do
   case $v in
     tht) build tht . rc-crane-carrier "$mode" ;;
     smd) build smd smd rc-crane-carrier-smd "$mode" ;;
+    advanced) build advanced advanced rc-crane-advanced "$mode" ;;
   esac
 done

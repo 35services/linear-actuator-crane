@@ -6,7 +6,8 @@
 
 **All CAD renderings and printable STLs:** [`cad/`](cad/README.md). **Carrier PCB, ready to order:**
 [`pcb/`](pcb/README.md), as a through‑hole version for hand soldering or an SMD version
-assembled by JLCPCB. The concept sketch
+assembled by JLCPCB. **Advanced board** with an ESP32‑S3, 4 stepper drivers, 16 servo/ESC
+outputs, RC and CRSF/SBUS inputs: [`pcb/advanced/`](pcb/advanced/README.md). The concept sketch
 that started it is [`gemini.jpeg`](gemini.jpeg).
 
 Drive two mini stepper‑motor linear actuators (2‑phase, 4‑wire, lead screw + slider) from
@@ -597,8 +598,9 @@ Do this once per axis:
 ## 7. Ideas for later
 
 * **Winch / slewing:** up to 4 TMC2209s can share the UART line (addresses 0–3). The C3 is
-  almost out of free pins, though. For a third and fourth axis, switch to an
-  **ESP32‑S3 SuperMini/Zero**, which has plenty of GPIOs.
+  almost out of free pins, so this needs the
+  [advanced board](pcb/advanced/README.md) (ESP32‑S3, 4 drivers, 16 PWM outputs). Its
+  firmware, with the ESP as receiver/multiplexer and a "crane mode" switch, is the next step.
 * **Smooth stepping while WiFi is busy:** generate the STEP pulses in hardware
   (FastAccelStepper uses the ESP32's RMT peripheral), so the web page also works while
   the crane moves.

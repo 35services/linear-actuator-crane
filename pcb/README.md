@@ -19,6 +19,13 @@ There are **two variants with the same layout and connectors**:
 | You solder | everything | sockets, headers, JST connectors and the two 100 µF capacitors |
 | DRC | 0 violations, 0 unconnected | 0 violations, 0 unconnected |
 
+
+**Need more?** The [advanced board](advanced/README.md) takes an ESP32‑S3‑DevKitC‑1, **4**
+TMC2209 drivers, a PCA9685 with **16 servo/ESC outputs**, 4 RC inputs and a CRSF/SBUS port
+(100 × 100 mm, SMD assembled by JLCPCB).
+
+[![advanced board](advanced/renders/board_3d.png)](advanced/README.md)
+
 ---
 
 ## THT variant
@@ -95,7 +102,7 @@ parts have none). This is the list to revisit when the assembly price matters.
 | Board | Part | LCSC | Status |
 |---|---|---|---|
 | SMD carrier | 100 µF 35 V electrolytic, 6.3×7.7 mm (C1, C2) | [C2836442](https://www.lcsc.com/product-detail/C2836442.html) | **Dropped:** C1/C2 are now THT and hand‑soldered. The SMD carrier has no extended parts |
-| Advanced board (planned) | PCA9685PW,118, 16‑channel PWM, TSSOP‑28 | [C2678753](https://www.lcsc.com/product-detail/C2678753.html) | **Used:** no basic alternative. Fallback [C92206](https://www.lcsc.com/product-detail/C92206.html) (PCA9685PW/Q900, also extended) |
+| [Advanced board](advanced/README.md) | PCA9685PW,118, 16‑channel PWM, TSSOP‑28 | [C2678753](https://www.lcsc.com/product-detail/C2678753.html) | **Used:** no basic alternative. Fallback [C92206](https://www.lcsc.com/product-detail/C92206.html) (PCA9685PW/Q900, also extended) |
 
 Check the current status and stock of every part in the JLCPCB BOMs, or of single parts:
 
@@ -171,7 +178,7 @@ output.
 ## Rebuilding
 
 ```bash
-./pcb/build.sh                # both variants: place, re-route, pour, DRC, Gerbers, renders
+./pcb/build.sh                # all boards: place, re-route, pour, DRC, Gerbers, renders
 ./pcb/build.sh smd            # one variant
 ./pcb/build.sh tht outputs    # only DRC + Gerbers + renders from the existing board
 ```
