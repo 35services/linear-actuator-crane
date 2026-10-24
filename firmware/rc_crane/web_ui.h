@@ -65,6 +65,8 @@ class WebUi {
  public:
   WebUi(SettingsStore& settings, std::function<String()> status) : settings(settings), status(status) {}
 
+  std::function<void()> beforeRestart;  // called before /api/restart restarts the ESP32
+
   // apOffMin: switch WiFi off after this many minutes without a connected client, 0 = never
   void begin(const String& ssid, const char* password, const float* apOffMin) {
     this->apOffMin = apOffMin;
@@ -82,6 +84,7 @@ class WebUi {
     });
     server.on("/api/restart", HTTP_POST, [this] {
       server.send(200, "text/plain", "Restarting, the crane homes again...");
+      if (beforeRestart) beforeRestart();
       delay(200);
       ESP.restart();
     });

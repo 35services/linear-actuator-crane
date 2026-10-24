@@ -7,6 +7,7 @@
 
 #include <TMCStepper.h>
 #include <AccelStepper.h>
+#include <Preferences.h>
 #include "settings.h"
 #include "web_ui.h"
 
@@ -31,6 +32,7 @@ float maxSpeedMmS  = 5.0f;    // [web] = 200 full steps/s, slow for first tests.
 float accelMmS2    = 20.0f;   // [web]
 float homeSpeedMmS = 2.0f;    // [web]
 constexpr float HOME_OVERRUN_MM = 2.0f;     // extra travel beyond stroke when homing
+float skipHomingIfParked = 0;  // [web] 1 = skip homing after a clean stop, see ParkStore
 
 // ------------------------------------------------------------- driver ----
 constexpr float    R_SENSE         = 0.11f; // BTT / FYSETC TMC2209 modules
@@ -273,8 +275,70 @@ void setDriversEnabled(bool on) {
   if (on) delay(2);
 }
 
+// Parking: with skipHomingIfParked on, the positions are stored in flash once the crane
+// stands still with the drivers off (the lead screws hold it there). The first step of the
+// next move marks them invalid, so after a power cut mid-move the crane homes on boot.
+class ParkStore {
+ public:
+  bool parked = false;  // flash holds valid positions
+
+  void begin() {
+    prefs.begin(NAMESPACE, false);
+    parked = prefs.getBool("ok", false);
+    prefs.end();
+  }
+
+  // Sets the axes to the stored positions. False if there are none, or if they were stored
+  // with other mechanics (reflashed) or another direction setting.
+  bool restore() {
+    if (!parked) return false;
+    long pos[NUM_AXES];
+    prefs.begin(NAMESPACE, false);
+    bool ok = prefs.getFloat("spm", 0) == STEPS_PER_MM;
+    for (int i = 0; i < NUM_AXES && ok; i++) {
+      pos[i] = prefs.getLong(("p" + String(i)).c_str(), -1);
+      ok = prefs.getFloat(("i" + String(i)).c_str(), -1) == axes[i].invertDir && pos[i] >= 0 &&
+           pos[i] <= (long)(axes[i].strokeMm * STEPS_PER_MM);
+    }
+    prefs.end();
+    if (!ok) return false;
+    for (int i = 0; i < NUM_AXES; i++) axes[i].stepper.setCurrentPosition(pos[i]);
+    return true;
+  }
+
+  void save() {
+    prefs.begin(NAMESPACE, false);
+    prefs.putFloat("spm", STEPS_PER_MM);
+    for (int i = 0; i < NUM_AXES; i++) {
+      prefs.putLong(("p" + String(i)).c_str(), axes[i].stepper.currentPosition());
+      prefs.putFloat(("i" + String(i)).c_str(), axes[i].invertDir);
+    }
+    prefs.putBool("ok", true);
+    prefs.end();
+    parked = true;
+    Serial.println("Parked, positions stored.");
+  }
+
+  // Call before anything moves
+  void invalidate() {
+    if (!parked) return;
+    prefs.begin(NAMESPACE, false);
+    prefs.putBool("ok", false);
+    prefs.end();
+    parked = false;
+  }
+
+ private:
+  static constexpr const char* NAMESPACE = "park";
+  Preferences prefs;
+};
+
+ParkStore park;
+bool homingSkipped = false;
+
 void tuneStallGuard(int index) {
   Axis& axis = axes[index];
+  park.invalidate();
   setDriversEnabled(true);
   axis.setStallOutput(true);
   axis.stepper.setMaxSpeed(homeSpeedMmS * STEPS_PER_MM);
@@ -294,7 +358,8 @@ void tuneStallGuard(int index) {
 SettingsStore settings;
 
 String statusJson() {
-  String out = "{\"uptime_s\":" + String(millis() / 1000) + ",\"drivers\":\"" + (driversEnabled ? "on" : "off") + "\"";
+  String out = "{\"uptime_s\":" + String(millis() / 1000) + ",\"drivers\":\"" + (driversEnabled ? "on" : "off") +
+               "\",\"boot\":\"" + (homingSkipped ? "parked, homing skipped" : "homed") + "\"";
   for (Axis& axis : axes) {
     float stick = readStick(axis.rc);
     out += ",\"" + String(axis.cfg.name) + "\":{\"pos_mm\":" + String(axis.stepper.currentPosition() / STEPS_PER_MM, 2) +
@@ -310,6 +375,7 @@ void addSettings() {
   settings.add("speed", "Motion", "Max speed", "mm/s", &maxSpeedMmS, 1, 50, 0.5);
   settings.add("accel", "Motion", "Acceleration", "mm/s²", &accelMmS2, 5, 500, 5);
   settings.add("home_speed", "Motion", "Homing speed", "mm/s", &homeSpeedMmS, 0.5, 10, 0.5);
+  settings.add("skip_home", "Homing", "Skip homing after a clean stop", "", &skipHomingIfParked, 0, 1, 1, "no (home on every boot)|yes");
   settings.add("deadband", "RC", "Stick deadband (rate mode)", "%", &rcDeadbandPct, 0, 30, 1);
   settings.add("wifi_off", "WiFi", "WiFi off without client after", "min", &wifiOffMin, 0, 120, 1);
   for (int i = 0; i < NUM_AXES; i++) axes[i].addSettings(settings, i);
@@ -332,13 +398,21 @@ void setup() {
   addSettings();
   for (Axis& axis : axes) axis.begin();
 
+  park.begin();
   if (TUNE_STALLGUARD >= 0 && TUNE_STALLGUARD < NUM_AXES) tuneStallGuard(TUNE_STALLGUARD);
 
-  // Retract the telescope first so the boom moves with the shortest lever
-  setDriversEnabled(true);
-  for (int i = NUM_AXES - 1; i >= 0; i--) axes[i].home();
+  homingSkipped = skipHomingIfParked > 0.5f && park.restore();
+  if (homingSkipped) {
+    Serial.println("Parked after a clean stop - homing skipped.");
+  } else {
+    park.invalidate();
+    setDriversEnabled(true);
+    // Retract the telescope first so the boom moves with the shortest lever
+    for (int i = NUM_AXES - 1; i >= 0; i--) axes[i].home();
+  }
 
   String ssid = "rc-crane-" + String((uint32_t)ESP.getEfuseMac() >> 16 & 0xFFFF, HEX);
+  web.beforeRestart = [] { park.invalidate(); };  // "Restart + home" really homes
   web.begin(ssid, WIFI_PASSWORD, &wifiOffMin);
 }
 
@@ -353,13 +427,12 @@ void loop() {
   }
 
   bool moving = false;
-  for (Axis& axis : axes) {
-    if (axis.stepper.distanceToGo() != 0) {
-      setDriversEnabled(true);
-      moving = true;
-    }
-    axis.run();
+  for (Axis& axis : axes) moving |= axis.stepper.distanceToGo() != 0;
+  if (moving) {
+    park.invalidate();  // before the first step
+    setDriversEnabled(true);
   }
+  for (Axis& axis : axes) axis.run();
 
   // the web server only runs while nothing moves: serving a page takes a few ms,
   // which would make the steppers stutter
@@ -369,5 +442,7 @@ void loop() {
     idleSince = millis();
   } else if (driversEnabled && millis() - idleSince > IDLE_DISABLE_MS) {
     setDriversEnabled(false);
+  } else if (!driversEnabled && !park.parked && skipHomingIfParked > 0.5f) {
+    park.save();
   }
 }

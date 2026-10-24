@@ -68,7 +68,7 @@ MOCK = """<script>
     if (url === '/api/reset') { settings.forEach(s => s.value = s.default); return text('All settings back to defaults.'); }
     if (url === '/api/restart') return text('Preview: an ESP32 would restart and home now.');
     if (url === '/api/status') {
-      const t = (Date.now() - t0) / 1000, out = {uptime_s: Math.floor(t), drivers: 'off'};
+      const t = (Date.now() - t0) / 1000, out = {uptime_s: Math.floor(t), drivers: 'off', boot: 'homed'};
       axes.forEach((a, i) => {
         const stroke = settings.find(s => s.key === 'a' + i + '_stroke').value;
         const pos = +(stroke / 2 + stroke / 2.5 * Math.sin(t / (3 + i))).toFixed(2);
