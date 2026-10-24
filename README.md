@@ -571,7 +571,7 @@ change, so it always matches the firmware.
 |---|---|
 | Motion | max speed (default 5 mm/s, see [Speed](#speed-how-fast-can-it-move)), acceleration, homing speed |
 | RC | stick deadband in rate mode |
-| WiFi | minutes without a connected client until WiFi switches off (0 = never) |
+| WiFi | seconds without a connected client until WiFi switches off (default 20, 0 = never) |
 | per axis | stroke, RC control (position / rate), run and homing current, stall threshold, invert direction |
 
 * **Save** applies the values right away and stores them in flash (NVS), so they survive a
@@ -587,8 +587,10 @@ change, so it always matches the firmware.
 * **The page only responds while the crane stands still.** Serving a page takes a few
   milliseconds, which would make the steppers stutter, so the web server pauses while an
   axis moves.
-* **WiFi switches off** after 10 minutes without a connected client (configurable), so it
-  doesn't disturb the RC signal timing while you drive. Restart to get it back.
+* **WiFi switches off 20 seconds after homing** if no client is connected (configurable,
+  0 = never), so it doesn't disturb the RC signal timing and the stepping while you drive.
+  Connect within those 20 s and it stays on as long as you are connected. Restart to get it
+  back.
 * **Adding a setting:** make the value a `float` variable and register it in
   `addSettings()` with one line: key (max. 15 characters), group, label, unit, pointer,
   min, max, step. Use `"a|b|c"` as options for a list. The page builds itself from that
@@ -636,6 +638,7 @@ Do this once per axis:
   All compared in [`docs/actuator_comparison.md`](docs/actuator_comparison.md).
 * **Smooth stepping while WiFi is busy:** generate the STEP pulses in hardware
   (FastAccelStepper uses the ESP32's RMT peripheral), so the web page also works while
-  the crane moves.
+  the crane moves. Then WiFi no longer has to switch off 20 s after homing, and the default
+  `wifi_off_s` can go back up to several minutes (or 0 = always on).
 * Store the last positions in NVS and skip homing after a clean shutdown. It's risky if
   power drops mid‑move, so homing on every boot is the safe default.
