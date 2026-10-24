@@ -109,6 +109,74 @@ gears when it hits the end on every homing run.
 
 ---
 
+## What our boards need to drive them
+
+The current boards are built around TMC2209 StepStick sockets, and those only drive steppers.
+The DC actuators need an **H‑bridge per actuator** instead.
+
+### Requirements per actuator type
+
+| | 1. Stepper slider | 2. DC micro cylinder 3–6 V | 3. DC 12 V with limit switches |
+|---|---|---|---|
+| Driver | TMC2209 StepStick | H‑bridge **with current sense** (DRV8876, DRV8874) | any H‑bridge (DRV8871, DRV8876, TB6612, …) |
+| Motor supply | 4.75–28 V, BEC is fine | **6 V max.**: BEC on 6 V directly; on 7.4 V limit the PWM to about 80 % | **12 V**: 3S LiPo, or a boost converter; runs slower and weaker on 6–7.4 V |
+| ESP pins | STEP + DIR, shared UART/EN/DIAG | 2 PWM (or PH + EN) + **1 ADC** | 2 PWM (or PH + EN) |
+| End detection | StallGuard / hard stop | current threshold in firmware | none needed (switches); current sense optional for obstacles |
+| Firmware | as now | new "DC axis": PWM, current watch, time‑based position | new "DC axis": PWM, time‑based position |
+
+### Current sense with the DRV8876
+
+The DRV8876 has an **IPROPI** output: a small current proportional to the motor current
+(about 1000 µA per A, see the datasheet). One resistor from IPROPI to GND turns it into a
+voltage for an ESP32 ADC pin:
+
+```
+             DRV8876
+ ESP PWM ──► PH/EN        OUT1 ──► motor
+ ESP PWM ──► EN/IN2       OUT2 ──►
+            IPROPI ──┬──► ESP ADC (with ~10 nF to GND)
+                     R_IPROPI ≈ 2.2 kΩ → about 2.2 V at 1 A
+            VREF ◄── divider from 3V3: sets the built-in current limit
+            VM   ◄── motor supply (BEC or battery)
+```
+
+* Pick `R_IPROPI` so the expected stall current lands at about 2–2.5 V, inside the ESP32's
+  ADC range.
+* **VREF** sets the driver's own current limit (I = VREF / (R_IPROPI × 1000 µA/A)). Set it
+  just above the running current: gentle end stops, no cooked motor if the firmware hangs.
+* **Modules instead of chips:** Pololu sells the DRV8876 and DRV8874 as small carrier boards.
+  If the current‑sense output is on a pin (check the board you buy), those could plug into
+  sockets, the same way the StepSticks do now.
+
+### What each of our boards would need
+
+| Board | Stepper slider | DC micro cylinder (2) | DC 12 V with limit switches (3) |
+|---|---|---|---|
+| **Small carrier** (ESP32‑C3, THT/SMD) | ✅ 2 axes, as is | ❌ new variant: 2 × DRV8876 instead of the StepSticks. The C3 has its ADC only on GPIO0–4, so the pin map changes: per axis 2 PWM + 1 ADC (GPIO0–4) | ❌ new variant as for (2), ADC not needed. 12 V supply needs a battery input again |
+| **Advanced board** (ESP32‑S3, single or stack) | ✅ 4 axes, as is | ❌ new variant: 4 DC driver sockets instead of the StepSticks, IPROPI on ADC1 pins (GPIO4–7, freed from STEP/DIR). Note that **ADC2 doesn't work while WiFi is on**, so the ADC pins must come from ADC1 (GPIO1–10) | ⚠️ VM can already come from a **3S battery via JP9**. Needs H‑bridges: a DC driver variant as for (2), or the trick below |
+| **No board at all** | – | ❌ an RC brushed ESC has no end detection, so it would stall at the ends | ✅ **mini brushed ESC** (forward/reverse) per actuator, straight on a receiver channel. The limit switches stop it at the ends |
+
+**The ESC trick works with the advanced board too:** its 16 PCA9685 outputs are ordinary servo
+signals. Option 3 actuators with mini brushed ESCs can hang on spare outputs, with no new
+board needed, as long as they get 12 V (or run slower on 6–7.4 V).
+
+**Driving the H‑bridges from the PCA9685:** a DC driver board could take its PWM signals from
+the PCA9685 instead of the ESP, which saves up to 8 ESP pins for 4 axes. The PCA9685's PWM
+is slow (max. about 1.5 kHz), which is audible but fine for small gear motors. Only the
+current‑sense ADC inputs need ESP pins.
+
+### Shopping list for a DC version (per axis)
+
+| Part | Option 2 | Option 3 |
+|---|---|---|
+| H‑bridge | DRV8876 (chip, LCSC [C575551](https://www.lcsc.com/product-detail/C575551.html), or Pololu carrier) | DRV8871 / DRV8876, or a mini brushed RC ESC |
+| R_IPROPI, ADC filter cap | 2.2 kΩ, 10 nF | – (optional) |
+| VREF divider | 2 resistors | – |
+| Bulk capacitor on VM | 47–100 µF | 100 µF |
+| Supply | BEC 6 V | 3S LiPo or 6 → 12 V boost converter (≥ 2 A input for a 60 N actuator, check its current) |
+
+---
+
 ## Summary
 
 | | Stepper slider | DC micro cylinder + current sense | DC 12 V with limit switches |
@@ -119,7 +187,7 @@ gears when it hits the end on every homing run.
 | Fits 1:8 | needs a housing, 132 mm long | **small, looks right** | compact, 12 V needed |
 | Stroke | **75 mm** | 10–25 mm | 10–30 mm |
 | Force | good (measure) | unknown, probably low – measure | **specified, up to 150 N** |
-| Board support today | **yes** (all boards) | no – needs a DC driver board | no – needs an H‑bridge and 12 V |
+| Board support today | **yes** (all boards) | no – needs a DC driver variant | via mini brushed ESCs on PCA9685 outputs; otherwise a DC driver variant |
 
 **Recommendation for the next step:** buy one DC micro cylinder (20 or 25 mm) and one 12 V
 actuator (60 N, 20 mm) and measure:
@@ -134,5 +202,4 @@ actuator (60 N, 20 mm) and measure:
 | Option 3 at 7.4 V | does it still move and switch off at the ends (slower, less force)? |
 
 With those numbers we can decide whether a DC driver variant of the advanced board makes
-sense: e.g. 4 × DRV8876 instead of the TMC2209 sockets, with the IPROPI outputs on ESP32
-ADC pins. The PCA9685 outputs could even drive the H‑bridge inputs.
+sense, as described in [What our boards need](#what-our-boards-need-to-drive-them).
