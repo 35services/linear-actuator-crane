@@ -39,8 +39,9 @@ that changes the CAD and commits the updated files, so they always match the sou
   the actuator runs 20 mm/s, the boom goes 0 → 55° in 2.5 s. Details in the
   [main README](../README.md#speed-how-fast-can-it-move).
 * **Animation:** View → Animate (FPS 10, Steps 60) moves both axes together.
-* **Outriggers** (`outriggers = true`): two feet that fold down under the chassis, driven
-  through bowden tubes by a third actuator under the chassis. See
+* **Outriggers** (`outriggers = true`): two stabilizer legs at the rear, behind the rear axle.
+  They swing out beyond the wheels, the pads stay level and come down almost vertically, and
+  a pawl locks them. Driven through bowden tubes by a third actuator on the deck. See
   [use case 1](use-cases/README.md#use-case-1-bowden-outriggers--bowden_outriggersscad).
 
 ---
@@ -50,7 +51,7 @@ that changes the CAD and commits the updated files, so they always match the sou
 The actuator pushes and pulls a 1.75 mm PETG filament in a PTFE tube, like a 3D printer's
 bowden extruder, so it can sit flat on the vehicle while the far end does the work.
 
-| Outriggers under the chassis | Crane with both actuators on the deck |
+| Rear stabilizer legs, out and locked | Crane with both actuators on the deck |
 |---|---|
 | ![outriggers](renders/outriggers.png) | ![bowden crane](renders/crane_bowden.png) |
 

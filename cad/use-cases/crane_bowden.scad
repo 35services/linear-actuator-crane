@@ -14,7 +14,8 @@
 // RC crane with its wires on the outside. The electronics box moves to the front of the deck
 // to make room for the loop.
 //
-// Option `outriggers` adds the bowden outriggers (bowden_outriggers.scad).
+// Option `outriggers` adds the bowden outriggers (bowden_outriggers.scad); their actuator
+// sits on top of the luffing actuator, the deck is full.
 //
 // View > Animate (FPS 10, Steps 60). The console echoes the stroke each line needs, the
 // tip-force ratio, the speeds and the tube lengths and bends.
@@ -71,7 +72,6 @@ act_x        = 160;    // their rear inserts, at the front: the rams point backw
 act_z        = -act_floor();     // screw axis above the deck
 fit_gap      = 3;      // crosshead to fitting at full stroke
 tube_up      = 22;     // radius the tubes bend upwards with behind the actuators
-or_act_y     = 0;      // outrigger actuator, under the chassis
 
 /* [Vehicle] */
 chassis      = [260, 130, 6];
@@ -255,7 +255,7 @@ module hook() {
 
 vehicle();
 electronics_box();
-if (outriggers) bowden_outriggers(feet, or_act_y);
+if (outriggers) bowden_outriggers(feet, deck_y, act_top() - act_floor());   // on top of the luffing actuator
 deck_actuator(deck_y, e_luff);
 deck_actuator(-deck_y, e_tele);
 

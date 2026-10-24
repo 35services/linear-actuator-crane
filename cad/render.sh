@@ -115,10 +115,11 @@ png crane.scad crane_side_retracted.png   50,0,135,90,0,0,760   -D boom_angle=0 
 png crane.scad crane_side_extended.png    50,0,135,90,0,0,760   -D boom_angle=55 -D tele_ext=30 -D slew_angle=0 --projection=o
 
 # --- use cases: bowden outriggers and the bowden crane
-png use-cases/bowden_outriggers.scad outriggers.png        50,0,-20,230,0,210,300 -D deploy=1 -D show_ground=false
-png use-cases/bowden_outriggers.scad outriggers_folded.png 40,0,-25,90,0,0,190    -D deploy=0 --projection=o
-png use-cases/bowden_outriggers.scad outriggers_down.png   40,0,-25,90,0,0,190    -D deploy=1 --projection=o
-png crane.scad crane_outriggers.png       40,0,20,80,0,30,700   -D boom_angle=30 -D tele_ext=25
+png use-cases/bowden_outriggers.scad outriggers.png        -40,0,0,55,0,220,420   -D deploy=1
+png use-cases/bowden_outriggers.scad outriggers_folded.png -30,0,0,90,0,270,330   -D deploy=0 --projection=o
+png use-cases/bowden_outriggers.scad outriggers_down.png   -30,0,0,90,0,270,330   -D deploy=1 --projection=o
+png use-cases/bowden_outriggers.scad outriggers_detail.png -112,52,-8,90,0,270,150 -D deploy=1 --projection=o
+png crane.scad crane_outriggers.png       20,0,30,70,0,215,720  -D boom_angle=30 -D tele_ext=25
 png use-cases/crane_bowden.scad crane_bowden.png      40,0,80,60,0,40,820   -D boom_angle=30 -D tele_ext=25
 png use-cases/crane_bowden.scad crane_bowden_back.png 0,0,80,60,0,140,820   -D boom_angle=30 -D tele_ext=25
 png use-cases/crane_bowden.scad crane_bowden_side.png 30,0,110,90,0,0,640   -D boom_angle=55 -D tele_ext=60 -D slew_angle=0 --projection=o
@@ -126,7 +127,7 @@ png use-cases/crane_bowden.scad crane_bowden_side.png 30,0,110,90,0,0,640   -D b
 # --- animated previews for the READMEs, one loop of each model's $t animation
 gif crane.scad                       crane.gif        80,0,80,60,0,40,940
 gif use-cases/crane_bowden.scad      crane_bowden.gif 80,0,80,60,0,40,940
-gif use-cases/bowden_outriggers.scad outriggers.gif   50,0,-20,230,0,210,360 -D show_ground=false
+gif use-cases/bowden_outriggers.scad outriggers.gif   -40,0,0,55,0,220,440
 GIF_SIZE=720,300 gif actuator_housing.scad actuator_housing.gif 95,0,0,65,0,20,300
 GIF_SIZE=720,300 gif actuator_28byj.scad   actuator_28byj.gif   100,0,-6,62,0,22,370
 GIF_SIZE=720,300 gif n20_actuator.scad     n20_actuator.gif     75,0,0,65,0,20,310

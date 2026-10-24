@@ -2,8 +2,8 @@
 // stepper linear actuators (actuator_housing.scad). Rough visual model, not
 // print-ready. All dimensions in mm.
 //
-// Option `outriggers`: two feet that fold down under the chassis, driven through
-// bowden tubes by a third actuator lying flat under the chassis
+// Option `outriggers`: two stabilizer legs at the rear that swing out beyond the wheels and
+// lock, driven through bowden tubes by a third actuator lying on the deck
 // (use-cases/bowden_outriggers.scad, explained in use-cases/README.md).
 //
 // View > Animate (FPS 10, Steps 60) to sweep the boom and telescope through

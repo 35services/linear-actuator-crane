@@ -12,7 +12,7 @@ the geometry. Every file echoes its numbers to the console.
 | File | What it is |
 |------|------------|
 | [`bowden_common.scad`](bowden_common.scad) | Shared pieces: tube along a smooth path with the filament inside, push‑fit fittings, bend radius and buckling checks |
-| [`bowden_outriggers.scad`](bowden_outriggers.scad) | Use case 1: two hinged feet under the chassis, driven by one actuator through two tubes. Opened on its own it shows the feet under a see‑through chassis. [`crane.scad`](../crane.scad) includes it (`outriggers = true`) |
+| [`bowden_outriggers.scad`](bowden_outriggers.scad) | Use case 1: two stabilizer legs at the rear that swing out and lock, driven by one actuator on the deck through two tubes. Opened on its own it shows the legs on a see‑through vehicle. [`crane.scad`](../crane.scad) includes it (`outriggers = true`) |
 | [`crane_bowden.scad`](crane_bowden.scad) | Use case 2: a copy of `crane.scad` with both crane actuators flat on the deck, working the boom through tubes |
 
 ## What a filament in a tube can and can't do
@@ -33,47 +33,62 @@ the geometry. Every file echoes its numbers to the console.
 
 ## Use case 1: bowden outriggers – `bowden_outriggers.scad`
 
-One actuator, hidden flat under the chassis, pushes two filaments. Each one swings a hinged
-foot down to the ground. Pulled back, the feet fold flat under the chassis.
+Two stabilizer legs at the rear, behind the rear axle, in the style of the
+[extended stabilizer legs for LEGO 42082](https://rebrickable.com/mocs/MOC-50496/Sehnclet/extended-stabilizer-legs-42082-rough-terrain-crane/)
+rather than a real crane's box outriggers. One actuator on the deck pulls two filaments; each
+swings a leg out sideways and down beyond the wheels, where a pawl locks it.
 
-![outriggers from below](../renders/outriggers.png)
+![outriggers](../renders/outriggers.png)
 
-![outriggers folding down and back](../renders/outriggers.gif)
+![outriggers swinging out and back](../renders/outriggers.gif)
 
-| Folded | Down, locked over centre |
+| Folded up (from behind) | Out and locked (from behind) |
 |---|---|
 | ![folded](../renders/outriggers_folded.png) | ![down](../renders/outriggers_down.png) |
 
-* **Actuator:** the enclosed actuator from `actuator_housing.scad`, its tray floor screwed to
-  the underside of the chassis, on the centre line. The feet need **18.4 mm of its 75 mm**.
-* **Crosshead:** on the ram nose, it holds both filaments, one above the other. Each filament
-  runs in its own tube, which makes a U‑turn in front of the actuator to its foot (tightest
-  bend 20.2 mm, 89–91 mm of tube).
-* **Foot:** a 36.6 mm arm on a hinge under the chassis edge, 40 mm in front of the
-  turntable, between the wheels. Folded, it lies flat under the chassis and points forward.
-  The filament pushes a pin on a 12 mm horn, which swings the arm down.
-* **Locks over centre:** the arm stops **10° past straight down**, against a stop on its
-  bracket. Past vertical, the vehicle's weight pushes the arm further into the stop, not back
-  up, so **the filament carries no load while the crane works**. Going over centre lifts the
-  vehicle by 0.6 mm.
-* **Retracting is a pull:** pulling the arm back over centre is the heavy move, and it puts
-  the filament in tension. The push (deploying) only swings the arm and squeezes the tyres
-  a little.
-* **Free filament at the foot:** 8–26 mm, which buckles at ≈ 27 N. The angle between filament
-  and horn never drops below 38°. The filament swings ±16° where it leaves the tube, so the
-  fitting there needs a short flexible exit or a swivel.
-* **Toes at ±58 mm, inside the wheels** (they start at 67 mm). The feet make the vehicle
-  **rigid** – no tyre squish, no rocking on the suspension – rather than wider. For a wider
-  stance the arms would have to swing outwards, across the vehicle. That needs tighter tube
-  bends than 20 mm, or room that the wheels take up.
+![lock detail](../renders/outriggers_detail.png)
+
+*Close‑up from behind: the parallelogram links, the horn with the filament, the pawl (grey)
+in the notch of the upper link's hub, and its spring (red).*
+
+* **Where:** the leg plane is 12 mm behind the chassis (x = −112), behind the rear wheels,
+  on a beam bolted under the chassis. The pads end up at **±103 mm** from the centre line,
+  outside the wheels (which end at ±97 mm), so the stance gets wider, not just stiffer.
+* **Parallelogram leg, the pad never rotates:** two 60 mm links on a bracket carry a vertical
+  carrier with the foot pad. Folded the links point up (85°) and the legs stand upright behind
+  the deck. Deployed they point slightly below horizontal (−8°).
+* **The pad comes down, not round:** in the last 10° before locking the pad moves **10.4 mm
+  down and only 0.5 mm sideways**. It presses 1 mm into the ground at the end (tyres and links
+  take that up).
+* **Drive – deploying is a pull:** the filament pulls a 14 mm horn on the upper link. Its tube
+  end sits 24 mm inboard of and 24 mm above the upper pivot, clear of the folded leg (checked
+  for collisions at five poses). The free filament shortens steadily from 42.7 to 22.4 mm, and
+  it never pulls at less than 43° to the horn. **20.3 mm of the actuator's 75 mm** move the
+  legs from folded to locked.
+* **Lock – a pivoting pawl:** at the end a spring pushes a pawl into a notch in the upper
+  link's hub. The ground pushes the leg up, the notch sits on the pawl: **the filament carries
+  no load while the crane works**.
+* **Release:** the filament's end sits in a 4 mm slot in the horn (lost motion). Pushing it
+  back first runs the slot and lifts the pawl over a release wire, then pushes the leg up.
+  Pushing is the weak direction (the 42.8 mm of free filament buckle at ≈ 10 N), but folding
+  an unloaded leg needs little force.
+* **Actuator on the deck:** the enclosed actuator from `actuator_housing.scad` lies on the
+  deck at y = 49 mm, beside the electronics box, ram pointing backwards. Its crosshead holds
+  both filaments, one above the other.
+* **Tubes:** each tube climbs from the deck and comes down into its leg's tube end in a quarter
+  circle. The tube to the far leg sweeps across behind the deck and comes in from the inboard
+  side. **Tightest bends 20.3 and 22.1 mm** (≥ 20 mm), lengths 136 and 196 mm.
+* **In `crane_bowden.scad`** the deck is taken by the two crane actuators, so the outrigger
+  actuator sits **on top of the luffing actuator** (`bowden_outriggers(d, y, height)`), with
+  the same tube bends.
 * **A third actuator** needs a third driver: the carrier boards have two TMC2209, the
-  [advanced board](../../pcb/advanced/README.md) has four. The feet only need their two end
+  [advanced board](../../pcb/advanced/README.md) has four. The legs only need their two end
   positions, so the cheaper [N20 DC actuator](../README.md#n20-dc-lead-screw-actuator--n20_actuatorscad)
   with current‑sense end detection would do as well.
 
-**In `crane.scad`:** `outriggers = true` (the default) adds the feet, `outrigger_deploy`
-poses them (0 = folded, 1 = down). With the animation on, the feet go down at the start of the
-cycle and fold in at the end.
+**In `crane.scad`:** `outriggers = true` (the default) adds the legs, `outrigger_deploy`
+poses them (0 = folded, 1 = out and locked). With the animation on, the legs go out at the
+start of the cycle and fold in at the end.
 
 ![crane with outriggers](../renders/crane_outriggers.png)
 
@@ -116,8 +131,8 @@ work the boom through tubes. The filaments only ever pull, so they can't buckle.
   * For more slew the loop needs more tube, or the tubes go through a hollow slewing ring.
 * **Speed** at 800 full steps/s: boom 0 → 55° in 2.8 s, telescope 3.75 s, the same
   20 mm/s actuator speed as `crane.scad`.
-* **Outriggers:** `outriggers = true` adds use case 1. Its actuator stays under the chassis,
-  out of the way of the deck actuators.
+* **Outriggers:** `outriggers = true` adds use case 1. Its actuator sits on top of the
+  luffing actuator, the deck is full.
 
 **Compared with `crane.scad`:** the boom loses two actuators and their wiring, so it's
 lighter and slimmer, and the actuators and their wires stay on the vehicle. The price: the
