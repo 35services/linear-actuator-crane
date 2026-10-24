@@ -13,6 +13,7 @@ the geometry. Every file echoes its numbers to the console.
 |------|------------|
 | [`bowden_common.scad`](bowden_common.scad) | Shared pieces: tube along a smooth path with the filament inside, push‑fit fittings, bend radius and buckling checks |
 | [`bowden_outriggers.scad`](bowden_outriggers.scad) | Use case 1: two stabilizer legs at the rear that swing out and lock, driven by one actuator on the deck through two tubes. Opened on its own it shows the legs on a see‑through vehicle. [`crane.scad`](../crane.scad) includes it (`outriggers = true`) |
+| [`outriggers_geared.scad`](outriggers_geared.scad) | Use case 1b: the same legs driven by one stepper at the rear, through a worm and cross shaft or a pinion between two racks |
 | [`crane_bowden.scad`](crane_bowden.scad) | Use case 2: a copy of `crane.scad` with both crane actuators flat on the deck, working the boom through tubes |
 
 ## What a filament in a tube can and can't do
@@ -41,6 +42,10 @@ swings a leg out sideways and down beyond the wheels, where a pawl locks it.
 ![outriggers](../renders/outriggers.png)
 
 ![outriggers swinging out and back](../renders/outriggers.gif)
+
+| Swinging out and back, from behind | |
+|---|---|
+| ![outriggers from behind](../renders/outriggers_back.gif) | |
 
 | Folded up (from behind) | Out and locked (from behind) |
 |---|---|
@@ -91,6 +96,64 @@ poses them (0 = folded, 1 = out and locked). With the animation on, the legs go 
 start of the cycle and fold in at the end.
 
 ![crane with outriggers](../renders/crane_outriggers.png)
+
+---
+
+## Use case 1b: the same legs driven by gears – `outriggers_geared.scad`
+
+The same parallelogram legs, but with one stepper (a 28BYJ‑48) at the rear beam instead of the
+actuator on the deck and the bowden tubes. Two ways to turn both upper links at once,
+`drive = "worm"` or `drive = "rack"`:
+
+| Worm and cross shaft | Pinion between two racks |
+|---|---|
+| ![worm drive](../renders/outriggers_worm.gif) | ![rack drive](../renders/outriggers_rack.gif) |
+| ![worm drive iso](../renders/outriggers_worm_iso.png) | ![rack drive iso](../renders/outriggers_rack_iso.png) |
+
+* **Worm:** a worm wheel sector (module 1, 24 teeth on the full circle) on each upper link's
+  hub, the two worms on **one cross shaft** 16 mm below the pivots, inside the rear beam.
+  Left‑ and right‑hand worms make the legs move as mirror images. The motor drives the shaft
+  through a 1:1 spur pair from above.
+  * **1:24, the shaft turns 6.2 times** for the full swing: **25 s** at the 28BYJ's 15 rpm.
+  * **Self‑locking:** lead angle 7.1°, below the friction angle of printed plastic (µ ≈ 0.2).
+    The legs hold **at any angle**, no lock, no pawl.
+  * **Torque is tight:** pressing both pads down with 5 N each takes ≈ 0.066 Nm at the motor
+    (efficiency 0.38), more than the 28BYJ's ≈ 0.05 Nm. Fine for a light touch (≈ 3 N), or
+    with a larger wheel (1:36) at 37 s. A faster small stepper makes the time reasonable.
+* **Rack and pinion, "driving them apart":** a pinion (16 teeth) stands upright in a guide
+  behind the legs, one rack in front of it and one behind, so turning it drives the racks
+  apart. Each rack pushes its leg out through a 42 mm pushrod on a 14 mm horn on the back of
+  the upper link. The whole drive sits behind the leg planes, so the pushrods never cross the
+  links: checked for collisions at 10 poses, with a control that moves the drive back into
+  the legs' planes.
+  * **Each rack moves 23.5 mm, the pinion turns 168°: 1.9 s** at 15 rpm.
+  * **Locks at dead centre:** at the end the pushrod points through the upper pivot
+    (0.14° off). Ground load on the pad then pushes along the pushrod into the pivot, and
+    can't turn the pinion back: the leg is locked without a pawl. Near dead centre the
+    mechanical advantage is huge, so pressing the pads down is easy.
+  * **In between it only holds with the motor powered**, the racks aren't self‑locking.
+
+### Bowden, worm or rack?
+
+| | Bowden (use case 1) | Worm | Rack and pinion |
+|---|---|---|---|
+| Motor | enclosed actuator on the deck (153 mm long) | 28BYJ‑48 at the rear beam | 28BYJ‑48 at the rear beam |
+| Between motor and legs | 2 PTFE tubes, filaments, fittings, crosshead | cross shaft, 2 worms, 2 wheel sectors, spur pair | pinion, 2 racks, guide, 2 pushrods |
+| Lock when out | spring pawl in a notch, released by a slot | self‑locking at **any** angle | dead centre, only at the end |
+| Holds half out | no | **yes** | only powered |
+| Full swing | ≈ 1 s (20 mm of actuator travel) | 25 s (28BYJ) | **1.9 s** |
+| Pad force at the end | filament pull × horn lever | limited by the motor (≈ 3 N/pad) | **very high** (dead centre) |
+| Deck space | the actuator takes one side | **none** | **none** |
+| Weak spot | the filament buckles when pushing back | slow, low force with a 28BYJ | racks need a straight guide |
+
+**Recommendation:** the **rack and pinion** fits these legs best. It's fast, locks without
+extra parts, presses the pads down hard, keeps the deck free, and racks and a pinion print
+easily. Take the **worm** if the legs should hold at any height, for example to level the
+crane on uneven ground. Then use a faster stepper, or one worm and motor per leg to level
+each side separately. The **bowden** version only makes sense if nothing may sit at the rear.
+
+All three drive the same legs: the leg geometry comes from `bowden_outriggers.scad`
+(`leg_parts(s, a, locked, bowden = false)` and the `ol_…()` accessors).
 
 ---
 

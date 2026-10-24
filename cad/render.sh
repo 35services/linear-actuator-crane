@@ -120,6 +120,10 @@ png use-cases/bowden_outriggers.scad outriggers_folded.png -30,0,0,90,0,270,330 
 png use-cases/bowden_outriggers.scad outriggers_down.png   -30,0,0,90,0,270,330   -D deploy=1 --projection=o
 png use-cases/bowden_outriggers.scad outriggers_detail.png -112,52,-8,90,0,270,150 -D deploy=1 --projection=o
 png crane.scad crane_outriggers.png       20,0,30,70,0,215,720  -D boom_angle=30 -D tele_ext=25
+for drive in worm rack; do
+  png use-cases/outriggers_geared.scad "outriggers_${drive}.png"      -112,0,-5,90,0,270,250 -D deploy=1 -D "drive=\"$drive\"" --projection=o
+  png use-cases/outriggers_geared.scad "outriggers_${drive}_iso.png"  -112,0,-10,62,0,220,230 -D deploy=0.6 -D "drive=\"$drive\"" -D show_ground=false
+done
 png use-cases/crane_bowden.scad crane_bowden.png      40,0,80,60,0,40,820   -D boom_angle=30 -D tele_ext=25
 png use-cases/crane_bowden.scad crane_bowden_back.png 0,0,80,60,0,140,820   -D boom_angle=30 -D tele_ext=25
 png use-cases/crane_bowden.scad crane_bowden_side.png 30,0,110,90,0,0,640   -D boom_angle=55 -D tele_ext=60 -D slew_angle=0 --projection=o
@@ -128,6 +132,9 @@ png use-cases/crane_bowden.scad crane_bowden_side.png 30,0,110,90,0,0,640   -D b
 gif crane.scad                       crane.gif        80,0,80,60,0,40,940
 gif use-cases/crane_bowden.scad      crane_bowden.gif 80,0,80,60,0,40,940
 gif use-cases/bowden_outriggers.scad outriggers.gif   -40,0,0,55,0,220,440
+gif use-cases/bowden_outriggers.scad outriggers_back.gif -30,0,0,90,0,270,330 --projection=o
+gif use-cases/outriggers_geared.scad outriggers_worm.gif -112,0,-5,90,0,270,250 -D 'drive="worm"' --projection=o
+gif use-cases/outriggers_geared.scad outriggers_rack.gif -112,0,-5,90,0,270,250 -D 'drive="rack"' --projection=o
 GIF_SIZE=720,300 gif actuator_housing.scad actuator_housing.gif 95,0,0,65,0,20,300
 GIF_SIZE=720,300 gif actuator_28byj.scad   actuator_28byj.gif   100,0,-6,62,0,22,370
 GIF_SIZE=720,300 gif n20_actuator.scad     n20_actuator.gif     75,0,0,65,0,20,310

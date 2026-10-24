@@ -125,14 +125,17 @@ module plane(s, dx, t) {
     linear_extrude(t, center = true) children();
 }
 
-// The leg's moving and fixed parts, without the tube end
-module leg_parts(s, a, locked) {
+// The leg's moving and fixed parts, without the tube end. bowden = false leaves out the horn,
+// the pawl and the tube end post: outriggers_geared.scad drives the same legs with gears.
+module leg_parts(s, a, locked, bowden = true) {
   // bracket cheek on the chassis side of the links: both pivots, the tube end post, the pawl pivot
   color("dimgray") plane(s, 2 * link_t + 2, 3) {
     bar2d(P1, P2, 10);
     bar2d(P2, [pivot_u - 14, pivot_v - link_gap], 8);
-    bar2d(P1, T2 + [0, 2], 6);
-    bar2d(P1, P1 + 13 * dir2(pawl_ang + 30), 6);
+    if (bowden) {
+      bar2d(P1, T2 + [0, 2], 6);
+      bar2d(P1, P1 + 13 * dir2(pawl_ang + 30), 6);
+    }
   }
   // links, side by side
   color("orange") {
@@ -140,12 +143,14 @@ module leg_parts(s, a, locked) {
       union() {
         bar2d(P1, q1(a), 7);
         circle(r = hub_r);
-        bar2d(P1, pin2(a), 6);                      // horn
+        if (bowden) bar2d(P1, pin2(a), 6);          // horn
       }
-      // notch for the pawl
-      rotate(pawl_ang - out_ang + a) translate([hub_r - 1.5, -1.5]) square([3, 3]);
-      // lost-motion slot for the filament end
-      translate(pin2(a)) rotate(atan2((T2 - pin2(a))[1], (T2 - pin2(a))[0])) translate([-1, -0.9]) square([slot_len, 1.8]);
+      if (bowden) {
+        // notch for the pawl
+        rotate(pawl_ang - out_ang + a) translate([hub_r - 1.5, -1.5]) square([3, 3]);
+        // lost-motion slot for the filament end
+        translate(pin2(a)) rotate(atan2((T2 - pin2(a))[1], (T2 - pin2(a))[0])) translate([-1, -0.9]) square([slot_len, 1.8]);
+      }
     }
     plane(s, link_t, link_t) { bar2d(P2, q2(a), 7); circle(d = 7); }
   }
@@ -154,12 +159,14 @@ module leg_parts(s, a, locked) {
   color("#333") translate(to3([q2(a)[0], pad_v(a)], s) - [pad[0] / 2, s > 0 ? pad[1] / 2 : pad[1] / 2, 0])
     cube([pad[0], pad[1], pad[2]]);
   // pawl with its spring: in the notch when locked, on the hub's rim otherwise
-  r = locked ? hub_r - 1.5 : hub_r + 0.2;
-  piv = P1 + 13 * dir2(pawl_ang + 30);
-  tip = P1 + r * dir2(pawl_ang);
-  color("silver") plane(s, -link_t, link_t) bar2d(piv, tip, 2.5);
-  color("silver") translate(to3(piv, s)) rotate([0, 90, 0]) cylinder(d = 2, h = 4 * link_t + 6, center = true, $fn = 12);
-  color("red") plane(s, -2 * link_t, 0.8) bar2d(piv + 4 * dir2(pawl_ang + 120), tip + 6 * dir2(pawl_ang + 120), 1);   // spring
+  if (bowden) {
+    r = locked ? hub_r - 1.5 : hub_r + 0.2;
+    piv = P1 + 13 * dir2(pawl_ang + 30);
+    tip = P1 + r * dir2(pawl_ang);
+    color("silver") plane(s, -link_t, link_t) bar2d(piv, tip, 2.5);
+    color("silver") translate(to3(piv, s)) rotate([0, 90, 0]) cylinder(d = 2, h = 4 * link_t + 6, center = true, $fn = 12);
+    color("red") plane(s, -2 * link_t, 0.8) bar2d(piv + 4 * dir2(pawl_ang + 120), tip + 6 * dir2(pawl_ang + 120), 1);   // spring
+  }
   // pins
   color("silver") for (p = [P1, P2, q1(a), q2(a)]) translate(to3(p, s)) rotate([0, 90, 0])
     cylinder(d = 3, h = 3 * link_t + 6, center = true, $fn = 12);
@@ -177,16 +184,43 @@ module tubes_and_ends(ay = act_y, dz = 0) {
   for (s = [-1, 1]) { tube_fitting(leg_mouth(s), leg_dir(s)); bowden_tube(tube_wp(s, ay, dz)); }
 }
 
+// Rear beam carrying both bracket cheeks, bolted under the chassis
+module rear_beam() {
+  bx0 = leg_x + 2 * link_t + 3.5;
+  color("dimgray") translate([bx0, -pivot_u - 4, pivot_v - link_gap - 5])
+    cube([chassis_x0 - bx0 + 20, 2 * pivot_u + 8, link_gap + 5 - pivot_v - chassis[2] + 0.01]);
+}
+
+// See-through chassis, wheels and ground, for the stand-alone views
+module vehicle_scene(ground = true) {
+  color("dimgray", 0.3) translate([chassis_x0, -chassis[1] / 2, -chassis[2]]) cube(chassis);
+  for (x = wheel_x, y = [-1, 1])
+    color("#222", 0.5) translate([x, y * (chassis[1] / 2 + wheel_w / 2 + 2), -chassis[2] - 10])
+      rotate([90, 0, 0]) cylinder(d = wheel_d, h = wheel_w, center = true);
+  if (ground) color("tan", 0.4) translate([chassis_x0 - 40, -130, ground_z - 1]) cube([chassis[0] + 60, 260, 1]);
+}
+
+// Leg geometry for other files (`use` only shares functions and modules, not variables)
+function ol_leg_x()     = leg_x;
+function ol_link_t()    = link_t;
+function ol_pivot_u()   = pivot_u;
+function ol_P1()        = P1;
+function ol_fold_ang()  = fold_ang;
+function ol_out_ang()   = out_ang;
+function ol_link_ang(d) = link_ang(d);
+function ol_link_len()  = link_len;
+function ol_hub_r()     = hub_r;
+function ol_ground_z()  = ground_z;
+function ol_chassis_x0() = chassis_x0;
+function ol_chassis_h() = chassis[2];
+
 // The whole outrigger set at deploy d (0 = folded, 1 = out and locked)
 // ay: the actuator's position across the deck; dz: its height, e.g. stacked on another actuator
 module bowden_outriggers(d, ay = act_y, dz = 0) {
   a = link_ang(d);
   az = act_z(dz);
   e = free2(a) - free2(link_ang(1));                              // ram extension
-  // rear beam carrying both bracket cheeks, bolted under the chassis
-  bx0 = leg_x + 2 * link_t + 3.5;
-  color("dimgray") translate([bx0, -pivot_u - 4, pivot_v - link_gap - 5])
-    cube([chassis_x0 - bx0 + 20, 2 * pivot_u + 8, link_gap + 5 - pivot_v - chassis[2] + 0.01]);
+  rear_beam();
   for (s = [-1, 1]) leg(s, a, d > 0.999);
 
   translate([x_ins, ay, az]) rotate([0, 0, 180]) enclosed_actuator(e);
@@ -227,10 +261,6 @@ d = animate ? 0.5 - 0.5 * cos(360 * $t) : deploy;
 scene = true;   // false: draw nothing, for files that include this one (collision checks)
 
 if (scene) {
-color("dimgray", 0.3) translate([chassis_x0, -chassis[1] / 2, -chassis[2]]) cube(chassis);
-for (x = wheel_x, y = [-1, 1])
-  color("#222", 0.5) translate([x, y * (chassis[1] / 2 + wheel_w / 2 + 2), -chassis[2] - 10])
-    rotate([90, 0, 0]) cylinder(d = wheel_d, h = wheel_w, center = true);
-if (show_ground) color("tan", 0.4) translate([chassis_x0 - 40, -130, ground_z - 1]) cube([chassis[0] + 60, 260, 1]);
-bowden_outriggers(d);
+  vehicle_scene(show_ground);
+  bowden_outriggers(d);
 }

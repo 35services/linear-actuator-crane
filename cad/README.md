@@ -55,6 +55,12 @@ bowden extruder, so it can sit flat on the vehicle while the far end does the wo
 |---|---|
 | ![outriggers](renders/outriggers.png) | ![bowden crane](renders/crane_bowden.png) |
 
+
+| Legs driven by a worm | Legs driven by a pinion between two racks |
+|---|---|
+| ![worm](renders/outriggers_worm.gif) | ![rack](renders/outriggers_rack.gif) |
+
+[Bowden, worm or rack?](use-cases/README.md#bowden-worm-or-rack)
 ---
 
 ## Enclosed actuator – `actuator_housing.scad`
