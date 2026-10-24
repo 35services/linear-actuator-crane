@@ -15,14 +15,14 @@ that changes the CAD and commits the updated files, so they always match the sou
 | [`diag_wire_example.scad`](diag_wire_example.scad) | Illustration: the DIAG jumper wire from a TMC2209 module to the carrier PCB |
 | [`use-cases/`](use-cases/README.md) | The actuator at a distance, driving through a bowden tube: outriggers for the crane, and a crane with its actuators on the deck |
 | [`stl/`](stl) | Printable parts, already turned for printing |
-| [`renders/`](renders) | The images below |
+| [`renders/`](renders) | The images and animations below |
 | [`render.sh`](render.sh) | Regenerates `stl/` and `renders/` |
 
 ---
 
 ## Crane concept – `crane.scad`
 
-![crane overview](renders/crane.png)
+![crane overview, both axes moving](renders/crane.gif)
 
 | Boom down, telescope in | Boom up 55°, telescope out |
 |---|---|
@@ -60,6 +60,8 @@ bowden extruder, so it can sit flat on the vehicle while the far end does the wo
 
 ![housing section](renders/actuator_housing_section.png)
 
+![housing section, ram moving](renders/actuator_housing.gif)
+
 | Side section, ram half out | Fully extended, lid on |
 |---|---|
 | ![housing side](renders/actuator_housing_side.png) | ![housing extended](renders/actuator_housing_extended.png) |
@@ -92,6 +94,8 @@ the same shared pieces from `actuator_common.scad`). How it compares to the othe
 [`docs/actuator_comparison.md`](../docs/actuator_comparison.md).
 
 ![28BYJ section](renders/actuator_28byj_section.png)
+
+![28BYJ section, ram moving](renders/actuator_28byj.gif)
 
 | Side section, ram 40 mm out | Fully extended, lid on |
 |---|---|
@@ -168,6 +172,8 @@ The same idea as the enclosed stepper actuator, built around a cheaper DC motor:
 | ![N20 lead screw motor](../docs/actuators/n20_lead_screw.jpg) | ![N20 drawing](../docs/actuators/n20_lead_screw_drawing.jpg) |
 
 ![N20 section](renders/n20_actuator_section.png)
+
+![N20 section, ram moving](renders/n20_actuator.gif)
 
 | Bulkhead, nut and piston | Fully extended, lid on |
 |---|---|
@@ -257,7 +263,8 @@ The module here is a generic mock. Its pot (VREF) is unused with UART current co
 ./cad/render.sh
 ```
 
-This needs OpenSCAD 2021.01 or newer and `python3`. STL triangles are sorted after export,
+This needs OpenSCAD 2021.01 or newer, `python3` and `ffmpeg` (for the animated GIFs, which
+loop each model's `$t` animation). STL triangles are sorted after export,
 so unchanged geometry produces byte‑identical files and git only shows real changes.
 
 To export a single part by hand:

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Renders the printable STLs and the PNG previews from the OpenSCAD sources.
+# Renders the printable STLs, the PNG previews and the animated GIFs from the OpenSCAD sources.
 # Used locally and by .github/workflows/render-cad.yml (there under xvfb-run,
 # since PNG export needs an OpenGL context).
 #
@@ -36,6 +36,33 @@ png() {  # png <source.scad> <output.png> <camera> [-D overrides...]
   echo "PNG  $out"
   "$OPENSCAD" --hardwarnings -o "$PNG_DIR/$out" --camera="$camera" --imgsize=1200,700 \
     --colorscheme=Tomorrow -D animate=false "$@" "$src"
+}
+
+GIF_FRAMES=${GIF_FRAMES:-60}
+GIF_FPS=${GIF_FPS:-15}
+
+gif() {  # [GIF_SIZE=w,h] gif <source.scad> <output.gif> <camera> [-D overrides...]
+  # renders one full $t cycle of the model's own animation and loops it
+  local src=$1 out=$2 camera=$3 frames size=${GIF_SIZE:-720,420} i
+  shift 3
+  echo "GIF  $out"
+  frames=$(mktemp -d)
+  # One OpenSCAD run per frame: --animate dies with X errors under xvfb on CI. $t can't
+  # be set with -D (2021.01 ignores it), so each frame includes the model from a wrapper.
+  # The log is only shown when something went wrong.
+  for ((i = 0; i < GIF_FRAMES; i++)); do
+    printf '$t = %s / %s;\ninclude <%s>\n' "$i" "$GIF_FRAMES" "$PWD/$src" > "$frames/frame.scad"
+    if ! "$OPENSCAD" --hardwarnings -o "$(printf '%s/f%05d.png' "$frames" "$i")" --camera="$camera" \
+        --imgsize="$size" --colorscheme=Tomorrow -D animate=true "$@" "$frames/frame.scad" \
+        >"$frames/log" 2>&1; then
+      cat "$frames/log" >&2
+      exit 1
+    fi
+  done
+  ffmpeg -loglevel error -y -framerate "$GIF_FPS" -i "$frames/f%05d.png" -filter_complex \
+    "[0:v]split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" \
+    -loop 0 "$PNG_DIR/$out"
+  rm -rf "$frames"
 }
 
 # --- enclosed actuator: printable parts
@@ -95,3 +122,11 @@ png crane.scad crane_outriggers.png       40,0,20,80,0,30,700   -D boom_angle=30
 png use-cases/crane_bowden.scad crane_bowden.png      40,0,80,60,0,40,820   -D boom_angle=30 -D tele_ext=25
 png use-cases/crane_bowden.scad crane_bowden_back.png 0,0,80,60,0,140,820   -D boom_angle=30 -D tele_ext=25
 png use-cases/crane_bowden.scad crane_bowden_side.png 30,0,110,90,0,0,640   -D boom_angle=55 -D tele_ext=60 -D slew_angle=0 --projection=o
+
+# --- animated previews for the READMEs, one loop of each model's $t animation
+gif crane.scad                       crane.gif        80,0,80,60,0,40,940
+gif use-cases/crane_bowden.scad      crane_bowden.gif 80,0,80,60,0,40,940
+gif use-cases/bowden_outriggers.scad outriggers.gif   50,0,-20,230,0,210,360 -D show_ground=false
+GIF_SIZE=720,300 gif actuator_housing.scad actuator_housing.gif 95,0,0,65,0,20,300
+GIF_SIZE=720,300 gif actuator_28byj.scad   actuator_28byj.gif   100,0,-6,62,0,22,370
+GIF_SIZE=720,300 gif n20_actuator.scad     n20_actuator.gif     75,0,0,65,0,20,310
