@@ -65,9 +65,9 @@ class WebUi {
  public:
   WebUi(SettingsStore& settings, std::function<String()> status) : settings(settings), status(status) {}
 
-  // apOffMin: switch WiFi off after this many minutes without a connected client, 0 = never
-  void begin(const String& ssid, const char* password, const float* apOffMin) {
-    this->apOffMin = apOffMin;
+  // apOffS: switch WiFi off after this many seconds without a connected client, 0 = never
+  void begin(const String& ssid, const char* password, const float* apOffS) {
+    this->apOffS = apOffS;
     WiFi.mode(WIFI_AP);
     WiFi.softAP(ssid.c_str(), password);
     Serial.printf("WiFi \"%s\" - settings at http://%s\n", ssid.c_str(), WiFi.softAPIP().toString().c_str());
@@ -95,7 +95,7 @@ class WebUi {
     if (!on) return;
     server.handleClient();
     if (WiFi.softAPgetStationNum() > 0) lastClient = millis();
-    if (*apOffMin > 0 && millis() - lastClient > *apOffMin * 60000UL) {
+    if (*apOffS > 0 && millis() - lastClient > *apOffS * 1000UL) {
       Serial.println("WiFi off (no client). Restart to turn it on again.");
       server.stop();
       WiFi.softAPdisconnect(true);
@@ -108,7 +108,7 @@ class WebUi {
   SettingsStore& settings;
   std::function<String()> status;
   WebServer server{80};
-  const float* apOffMin = nullptr;
+  const float* apOffS = nullptr;
   uint32_t lastClient = 0;
   bool on = false;
 

@@ -52,7 +52,7 @@ constexpr uint32_t RC_TIMEOUT_MS  = 250;
 
 // --------------------------------------------------------------- WiFi ----
 constexpr const char* WIFI_PASSWORD = "crane-setup";  // min. 8 characters, change it
-float wifiOffMin = 10.0f;     // [web] WiFi off after this many minutes without a client, 0 = never
+float wifiOffS = 20.0f;       // [web] WiFi off this many seconds after homing without a client, 0 = never
 
 // --------------------------------------------------------------- axes ----
 // stroke, invert, run/home current, SG threshold and mode are [web] defaults
@@ -311,7 +311,7 @@ void addSettings() {
   settings.add("accel", "Motion", "Acceleration", "mm/s²", &accelMmS2, 5, 500, 5);
   settings.add("home_speed", "Motion", "Homing speed", "mm/s", &homeSpeedMmS, 0.5, 10, 0.5);
   settings.add("deadband", "RC", "Stick deadband (rate mode)", "%", &rcDeadbandPct, 0, 30, 1);
-  settings.add("wifi_off", "WiFi", "WiFi off without client after", "min", &wifiOffMin, 0, 120, 1);
+  settings.add("wifi_off_s", "WiFi", "WiFi off without client after", "s", &wifiOffS, 0, 3600, 5);
   for (int i = 0; i < NUM_AXES; i++) axes[i].addSettings(settings, i);
 
   settings.load();
@@ -339,7 +339,7 @@ void setup() {
   for (int i = NUM_AXES - 1; i >= 0; i--) axes[i].home();
 
   String ssid = "rc-crane-" + String((uint32_t)ESP.getEfuseMac() >> 16 & 0xFFFF, HEX);
-  web.begin(ssid, WIFI_PASSWORD, &wifiOffMin);
+  web.begin(ssid, WIFI_PASSWORD, &wifiOffS);
 }
 
 void loop() {
