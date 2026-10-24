@@ -2,7 +2,7 @@
 
 [![Render CAD](https://github.com/35services/linear-actuator-crane/actions/workflows/render-cad.yml/badge.svg)](https://github.com/35services/linear-actuator-crane/actions/workflows/render-cad.yml)
 
-![crane concept](cad/renders/crane.png)
+![crane concept, boom and telescope moving](cad/renders/crane.gif)
 
 **All CAD renderings and printable STLs:** [`cad/`](cad/README.md). **Carrier PCB, ready to order:**
 [`pcb/`](pcb/README.md), as a through‑hole version for hand soldering or an SMD version
@@ -34,11 +34,18 @@ Features:
 |---|---|
 | ![crane retracted](cad/renders/crane_side_retracted.png) | ![crane extended](cad/renders/crane_side_extended.png) |
 
+**Bowden drives** ([use cases](cad/use-cases/README.md)): the actuator sits flat on the vehicle
+and pushes or pulls a filament in a PTFE tube.
+
+| Outriggers under the chassis | Crane with both actuators on the deck |
+|---|---|
+| ![bowden outriggers folding](cad/renders/outriggers.gif) | ![bowden crane moving](cad/renders/crane_bowden.gif) |
+
 **Actuators** ([CAD](cad/README.md), [comparison](docs/actuator_comparison.md)):
 
 | Stepper slider in a printed housing (used now) | 28BYJ‑48 + T8 lead screw (cheap stepper) | N20 + M4 lead screw (DC) |
 |---|---|---|
-| ![slider housing](cad/renders/actuator_housing_section.png) | ![28BYJ actuator](cad/renders/actuator_28byj_section.png) | ![N20 actuator](cad/renders/n20_actuator_section.png) |
+| ![slider housing](cad/renders/actuator_housing.gif) | ![28BYJ actuator](cad/renders/actuator_28byj.gif) | ![N20 actuator](cad/renders/n20_actuator.gif) |
 | 75 mm stroke, 15–20 mm/s, exact position | 75 mm stroke, ≈ 2.7 mm/s, exact position, hall home sensor | 80 mm stroke, current‑sense homing |
 
 **Boards** ([PCB overview](pcb/README.md)):

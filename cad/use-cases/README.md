@@ -38,6 +38,8 @@ foot down to the ground. Pulled back, the feet fold flat under the chassis.
 
 ![outriggers from below](../renders/outriggers.png)
 
+![outriggers folding down and back](../renders/outriggers.gif)
+
 | Folded | Down, locked over centre |
 |---|---|
 | ![folded](../renders/outriggers_folded.png) | ![down](../renders/outriggers_down.png) |
@@ -83,6 +85,8 @@ cycle and fold in at the end.
 work the boom through tubes. The filaments only ever pull, so they can't buckle.
 
 ![bowden crane](../renders/crane_bowden.png)
+
+![bowden crane, boom and telescope moving](../renders/crane_bowden.gif)
 
 | From behind: the tube loop | Boom up 55°, telescope out 60 mm |
 |---|---|

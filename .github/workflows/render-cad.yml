@@ -1,6 +1,6 @@
 name: Render CAD
 
-# Regenerates cad/stl/*.stl and cad/renders/*.png from the OpenSCAD sources.
+# Regenerates cad/stl/*.stl and cad/renders/*.png / *.gif from the OpenSCAD sources.
 # On main the results are committed back; on pull requests they are only
 # uploaded as an artifact so you can check them before merging.
 
@@ -34,11 +34,11 @@ jobs:
       - name: Install OpenSCAD
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends openscad xvfb xauth fonts-liberation
+          sudo apt-get install -y --no-install-recommends openscad xvfb xauth fonts-liberation ffmpeg
           openscad --version
 
       # PNG export needs an OpenGL context, xvfb provides a virtual display
-      - name: Render STLs and previews
+      - name: Render STLs, previews and animations
         run: xvfb-run -a ./cad/render.sh
 
       - name: Upload renders
