@@ -27,6 +27,32 @@ Features:
 * **Battery friendly.** Lead screws are self‑locking, so the drivers are switched off when
   idle and the load still holds.
 
+
+### Overview
+
+| Crane, boom down | Crane, boom up 55°, telescope out |
+|---|---|
+| ![crane retracted](cad/renders/crane_side_retracted.png) | ![crane extended](cad/renders/crane_side_extended.png) |
+
+**Actuators** ([CAD](cad/README.md), [comparison](docs/actuator_comparison.md)):
+
+| Stepper slider in a printed housing (used now) | 28BYJ‑48 + T8 lead screw (cheap stepper) | N20 + M4 lead screw (DC) |
+|---|---|---|
+| ![slider housing](cad/renders/actuator_housing_section.png) | ![28BYJ actuator](cad/renders/actuator_28byj_section.png) | ![N20 actuator](cad/renders/n20_actuator_section.png) |
+| 75 mm stroke, 15–20 mm/s, exact position | 75 mm stroke, ≈ 2.7 mm/s, exact position, hall home sensor | 80 mm stroke, current‑sense homing |
+
+**Boards** ([PCB overview](pcb/README.md)):
+
+| Carrier, THT | Carrier, SMD (JLCPCB) | Advanced, ESP32‑S3 |
+|---|---|---|
+| ![THT carrier](pcb/renders/board_3d.png) | ![SMD carrier](pcb/smd/renders/board_3d.png) | ![advanced board](pcb/advanced/renders/board_3d.png) |
+| ESP32‑C3, 2 × TMC2209, 80 × 64 mm | the same, SMD parts assembled | 4 × TMC2209, 16 PWM outputs, 100 × 100 mm |
+
+| Advanced stack: top board | Advanced stack: bottom board | Web settings page |
+|---|---|---|
+| ![stack top](pcb/advanced-stack/top/renders/board_3d.png) | ![stack bottom](pcb/advanced-stack/bottom/renders/board_3d.png) | <img src="docs/web_ui.png" alt="web settings page" width="260"> |
+| DevKitC‑1 + 4 drivers, 84 × 76 mm | PCA9685, inputs, power | [try it in the browser](https://raw.githack.com/35services/linear-actuator-crane/main/firmware/web_preview/index.html) |
+
 ---
 
 ## 1. How it works
