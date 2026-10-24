@@ -22,6 +22,9 @@ multiplexer between receiver and servos/ESC, or reading the drive channels in "c
 > The current firmware is for the small ESP32‑C3 board; the firmware for this board
 > (4 axes, PCA9685 outputs, CRSF/SBUS, crane mode) is the next step.
 
+> **Which remote control?** RC/ELRS on the CRSF port, a PlayStation controller through a
+> Bluepad32 bridge, or a WiFi app: see [remote control options](../../docs/remote_control_comparison.md).
+
 | Top | Bottom |
 |---|---|
 | ![top](renders/board_top.png) | ![bottom](renders/board_bottom.png) |
