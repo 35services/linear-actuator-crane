@@ -51,6 +51,20 @@ for part in tray lid ram; do
   png actuator_housing.scad "actuator_$part.png" 60,0,8,55,0,330,280 -D "part=\"$part\""
 done
 
+# --- N20 DC lead screw actuator: printable parts
+for part in tray lid ram; do
+  stl n20_actuator.scad "$part" "n20_$part.stl"
+done
+
+# --- N20 DC lead screw actuator: previews
+png n20_actuator.scad n20_actuator_section.png  35,0,0,65,0,20,290    -D extension=0
+png n20_actuator.scad n20_actuator_detail.png   2,0,0,60,0,30,110     -D extension=0
+png n20_actuator.scad n20_actuator_extended.png 75,0,0,60,0,25,420    -D extension=80 -D section=false -D show_lid=true
+png n20_actuator.scad n20_actuator_side.png     55,0,0,90,0,0,330     -D extension=40 --projection=o
+png n20_actuator.scad n20_tray.png              31,0,8,55,0,330,290   -D 'part="tray"'
+png n20_actuator.scad n20_lid.png               31,0,0,55,0,330,290   -D 'part="lid"'
+png n20_actuator.scad n20_ram.png               53,0,6,55,0,330,230   -D 'part="ram"'
+
 # --- DIAG wire illustration for the carrier PCB
 png diag_wire_example.scad diag_wire_example.png 16,-18,18,62,0,300,125
 

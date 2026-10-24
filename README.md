@@ -604,7 +604,10 @@ Do this once per axis:
   firmware, with the ESP as receiver/multiplexer and a "crane mode" switch, is the next step.
 * **Cheaper actuators:** DC lead‑screw cylinders with current‑based end detection, or 12 V
   actuators with built‑in limit switches, compared in
-  [`docs/actuator_comparison.md`](docs/actuator_comparison.md).
+  [`docs/actuator_comparison.md`](docs/actuator_comparison.md). One of them already has a
+  printed housing: the **N20 gear motor with M4 lead screw**,
+  [`cad/n20_actuator.scad`](cad/README.md#n20-dc-lead-screw-actuator--n20_actuatorscad)
+  (80 mm stroke).
 * **Smooth stepping while WiFi is busy:** generate the STEP pulses in hardware
   (FastAccelStepper uses the ESP32's RMT peripheral), so the web page also works while
   the crane moves.

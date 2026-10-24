@@ -5,27 +5,28 @@ Goal of this comparison: find the cheapest actuator whose **end positions can be
 without extra switches**, and compare it against actuators that bring their own limit
 switches.
 
-| | 1. Stepper slider (current) | 2. DC micro cylinder, 3–6 V | 3. DC mini actuator, 12 V, limit switches |
-|---|---|---|---|
-| Photo | ![stepper](actuator_photo.png) | ![dc micro](actuators/dc_micro_cylinder.jpg) | ![12 V](actuators/dc_12v_limit_switch.jpg) |
-| Listing | [AliExpress](https://de.aliexpress.com/item/1005005779515640.html) | [AliExpress](https://a.aliexpress.com/_EyGPNzg) | [AliExpress, 10–25 mm](https://a.aliexpress.com/_Ez364hU), [AliExpress, 30 mm](https://a.aliexpress.com/_EzM5tL8) |
-| Drive | 2‑phase stepper, 18°, M3 lead screw 0.5 mm | brushed DC gear motor + lead screw (2 wires) | brushed DC gear motor + lead screw (2 wires) |
-| Supply | driver: 4.75–28 V (BEC is fine) | **3–6 V** (BEC 6 V setting) | **12 V** (3S LiPo or boost converter) |
-| Stroke | **75 mm** | 10 / 15 / 20 / 25 mm | 10 / 15 / 20 mm, and 30 mm (second listing) |
-| Length, retracted | 132.5 mm in the [printed housing](../cad/README.md#enclosed-actuator--actuator_housingscad) | 66 / 71 / 76 / 81 mm (pin to pin) | compact gearbox block + rod, see photo |
-| Force | small motor, lots of force from the 0.5 mm lead (not measured yet) | **not stated – measure** | **30 / 60 / 100 / 150 N** (versions) |
-| Speed | 15–20 mm/s realistic, see [Speed](../README.md#speed-how-fast-can-it-move) | not stated – measure | **15 mm/s** at 60 N (label); stronger versions are slower |
-| Holds position unpowered | yes (lead screw) | probably (lead screw + gearbox) – check | usually (lead screw + gearbox) – check |
-| Position known | **exactly** (step counting) after homing | only at the ends; in between estimated (time) | only at the ends; in between estimated (time) |
-| End detection | StallGuard via DIAG, or hard‑stop homing | **current rise at stall** (this document) | **built‑in limit switches** cut the motor |
-| Driver per actuator | TMC2209 StepStick (~€3–4) | small H‑bridge with current sense | any H‑bridge, current sense optional |
-| ESP pins per actuator | STEP + DIR (+ shared UART, EN, DIAG) | 2 PWM + 1 ADC | 2 PWM |
-| Mounting | needs the 3D printed housing | eyes on both ends, ready to use | eyes on both ends, brackets included |
-| Look on a 1:8 model | printed box | **looks like a hydraulic cylinder** | black gearbox block |
+| | 1. Stepper slider (current) | 2. DC micro cylinder, 3–6 V | 3. DC mini actuator, 12 V, limit switches | 4. N20 + M4 screw, printed housing |
+|---|---|---|---|---|
+| Photo | ![stepper](actuator_photo.png) | ![dc micro](actuators/dc_micro_cylinder.jpg) | ![12 V](actuators/dc_12v_limit_switch.jpg) | ![n20](actuators/n20_lead_screw.jpg) |
+| Listing | [AliExpress](https://de.aliexpress.com/item/1005005779515640.html) | [AliExpress](https://a.aliexpress.com/_EyGPNzg) | [AliExpress, 10–25 mm](https://a.aliexpress.com/_Ez364hU), [AliExpress, 30 mm](https://a.aliexpress.com/_EzM5tL8) | [AliExpress](https://de.aliexpress.com/item/1005006668206749.html) |
+| Drive | 2‑phase stepper, 18°, M3 lead screw 0.5 mm | brushed DC gear motor + lead screw (2 wires) | brushed DC gear motor + lead screw (2 wires) | brushed N20 gear motor (2 wires); the screw turns, an M4 nut rides in the printed ram |
+| Supply | driver: 4.75–28 V (BEC is fine) | **3–6 V** (BEC 6 V setting) | **12 V** (3S LiPo or boost converter) | 3 / 6 / 12 V versions: take **6 V** for the BEC |
+| Stroke | **75 mm** | 10 / 15 / 20 / 25 mm | 10 / 15 / 20 mm, and 30 mm (second listing) | **80 mm** (cut the screw for less) |
+| Length, retracted | 132.5 mm in the [printed housing](../cad/README.md#enclosed-actuator--actuator_housingscad) | 66 / 71 / 76 / 81 mm (pin to pin) | compact gearbox block + rod, see photo | 151 mm in the [printed housing](../cad/README.md#n20-dc-lead-screw-actuator--n20_actuatorscad) |
+| Force | small motor, lots of force from the 0.5 mm lead (not measured yet) | **not stated – measure** | **30 / 60 / 100 / 150 N** (versions) | not stated, estimate [below](#4-n20-gear-motor-with-m4-lead-screw-in-a-printed-housing) – measure |
+| Speed | 15–20 mm/s realistic, see [Speed](../README.md#speed-how-fast-can-it-move) | not stated – measure | **15 mm/s** at 60 N (label); stronger versions are slower | RPM × 0.7 mm: **11.7 mm/s** with the 1000 RPM version, no load |
+| Holds position unpowered | yes (lead screw) | probably (lead screw + gearbox) – check | usually (lead screw + gearbox) – check | yes (M4 thread + gearbox) |
+| Position known | **exactly** (step counting) after homing | only at the ends; in between estimated (time) | only at the ends; in between estimated (time) | only at the ends; in between estimated (time) |
+| End detection | StallGuard via DIAG, or hard‑stop homing | **current rise at stall** (this document) | **built‑in limit switches** cut the motor | **current rise at the printed hard stops** |
+| Driver per actuator | TMC2209 StepStick (~€3–4) | small H‑bridge with current sense | any H‑bridge, current sense optional | H‑bridge with current sense, as for 2 |
+| ESP pins per actuator | STEP + DIR (+ shared UART, EN, DIAG) | 2 PWM + 1 ADC | 2 PWM | 2 PWM + 1 ADC |
+| Mounting | needs the 3D printed housing | eyes on both ends, ready to use | eyes on both ends, brackets included | needs the 3D printed housing, M3 inserts at both ends |
+| Look on a 1:8 model | printed box | **looks like a hydraulic cylinder** | black gearbox block | printed box, 18 × 18 mm |
 
 Prices change too often to list; check the listings. Rough order: the DC micro cylinder is
-the cheapest per axis, the stepper slider plus driver is in between, the 12 V actuator with
-limit switches is the most expensive.
+the cheapest per axis, close to the N20 with M4 screw (about €5 plus a nut and the print), the
+stepper slider plus driver is in between, the 12 V actuator with limit switches is the most
+expensive.
 
 ### The DC micro cylinder (option 2)
 
@@ -48,7 +49,46 @@ diode: at an end the switch opens and the motor can only run back the other way.
 the polarity always works, so the controller needs no end detection at all. (How these
 particular ones are wired isn't in the listing – check with a multimeter.)
 
-*Photos: from the AliExpress listings linked above.*
+### 4. N20 gear motor with M4 lead screw, in a printed housing
+
+![drawing](actuators/n20_lead_screw_drawing.jpg)
+
+A bare **12GA‑N20 gear motor with an M4 × 100 mm screw** on its output shaft, about €5. It
+has no nut and no guide, so it needs a housing.
+[`cad/n20_actuator.scad`](../cad/README.md#n20-dc-lead-screw-actuator--n20_actuatorscad)
+is that housing, built the same way as the stepper's: tray, lid and a ram with an M4 hex
+nut in its piston. It gives **80 mm stroke at 151 mm retracted**, with printed hard stops at
+both ends for current‑sense homing.
+
+**Speed** = screw RPM × lead. M4 is normally 0.7 mm pitch (the listing's nut drawing says
+"M4 × 1", so count it on yours). No‑load values at the rated voltage, so a 6 V motor on the
+6 V BEC:
+
+| Version | Ram speed | 80 mm stroke | Boom 0 → 55° (49.6 mm) |
+|---:|---:|---:|---:|
+| 1000 RPM | 11.7 mm/s | 6.9 s | 4.2 s |
+| 500 RPM | 5.8 mm/s | 14 s | 8.5 s |
+| 300 RPM | 3.5 mm/s | 23 s | 14 s |
+| 100 RPM | 1.2 mm/s | 69 s | 42 s |
+
+Under load it gets slower. The stepper does 15–20 mm/s, so even the fastest version is
+slower. On the 7.4 V BEC setting a 6 V motor runs about 20 % faster, but limit the PWM to
+about 80 % as for option 2.
+
+**Force:** not in the listing. A screw turns torque into force:
+F ≈ 2π × T × η / lead, with η ≈ 0.2–0.3 for a steel screw in a brass or steel nut. If the
+1000 RPM version stalls at 0.2 kg·cm (0.02 N·m), that's about 2π × 0.02 × 0.25 / 0.0007 ≈
+**45 N at stall**, so maybe 10–15 N while moving. The slower versions have more gear
+reduction, so roughly twice the force at half the speed. These are guesses: measure with
+the scale test below.
+
+**Driving it:** exactly what option 2 needs: an H‑bridge with current sense (DRV8876),
+2 PWM + 1 ADC per axis, the same current‑threshold firmware. The printed hard stops are the
+"ends" the firmware detects. N20 motors are also sold with a small **magnetic encoder** on
+the back (not this listing). With one, the position is exact like the stepper's, at the
+cost of 2 more GPIOs per axis and a longer housing (`wire_room` in the CAD).
+
+*Photos and drawings: from the AliExpress listings linked above.*
 
 ---
 
@@ -179,18 +219,19 @@ current‑sense ADC inputs need ESP pins.
 
 ## Summary
 
-| | Stepper slider | DC micro cylinder + current sense | DC 12 V with limit switches |
-|---|---|---|---|
-| Position accuracy | **exact** | estimated between the ends | estimated between the ends |
-| End detection | StallGuard / hard stop | current rise, needs a sense driver and tuning | **built in**, no tuning |
-| Cost per axis | medium | **lowest** | highest |
-| Fits 1:8 | needs a housing, 132 mm long | **small, looks right** | compact, 12 V needed |
-| Stroke | **75 mm** | 10–25 mm | 10–30 mm |
-| Force | good (measure) | unknown, probably low – measure | **specified, up to 150 N** |
-| Board support today | **yes** (all boards) | no – needs a DC driver variant | via mini brushed ESCs on PCA9685 outputs; otherwise a DC driver variant |
+| | Stepper slider | DC micro cylinder + current sense | DC 12 V with limit switches | N20 + M4 screw, printed |
+|---|---|---|---|---|
+| Position accuracy | **exact** | estimated between the ends | estimated between the ends | estimated between the ends |
+| End detection | StallGuard / hard stop | current rise, needs a sense driver and tuning | **built in**, no tuning | current rise at the printed hard stops |
+| Cost per axis | medium | **lowest** | highest | **low** (≈ €5 motor, a nut and the print) |
+| Fits 1:8 | needs a housing, 132 mm long | **small, looks right** | compact, 12 V needed | needs a housing, 151 mm long, but slim (18 mm) |
+| Stroke | **75 mm** | 10–25 mm | 10–30 mm | **80 mm** |
+| Force | good (measure) | unknown, probably low – measure | **specified, up to 150 N** | not stated, estimated tens of N – measure |
+| Board support today | **yes** (all boards) | no – needs a DC driver variant | via mini brushed ESCs on PCA9685 outputs; otherwise a DC driver variant | no – the same DC driver variant as option 2 |
 
-**Recommendation for the next step:** buy one DC micro cylinder (20 or 25 mm) and one 12 V
-actuator (60 N, 20 mm) and measure:
+**Recommendation for the next step:** buy one DC micro cylinder (20 or 25 mm), one 12 V
+actuator (60 N, 20 mm) and one N20 with M4 screw (6 V, 1000 RPM, in the printed housing),
+and measure:
 
 | Test | How |
 |---|---|
