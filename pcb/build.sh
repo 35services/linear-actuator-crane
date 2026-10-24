@@ -7,6 +7,7 @@
 #   tht       pcb/rc-crane-carrier.kicad_pcb                 everything through-hole, hand soldered
 #   smd       pcb/smd/rc-crane-carrier-smd.kicad_pcb         SMD parts assembled by JLCPCB, connectors by hand
 #   advanced  pcb/advanced/rc-crane-advanced.kicad_pcb       ESP32-S3, 4 drivers, 16 PWM outputs (SMD)
+#   stack     pcb/advanced-stack/{top,bottom}/rc-crane-stack-*.kicad_pcb   the same as two stacked boards
 #
 # Needs KiCad 10 and Java 21+. Freerouting is downloaded on first run.
 #   ./pcb/build.sh                 # all boards, full rebuild (re-routes)
@@ -35,6 +36,13 @@ build() {  # build <variant> <dir> <board name> [outputs]
   local variant=$1 dir=$2 name=$3 mode=${4:-all}
   local BOARD=$dir/$name.kicad_pcb
   echo "######## $variant -> $BOARD"
+  GEN_ARGS=()
+  case $variant in
+    tht|smd) GEN=("$KICAD_PYTHON" generate_pcb.py); GEN_ARGS=("$variant") ;;
+    advanced) GEN=("$KICAD_PYTHON" advanced/generate_advanced.py) ;;
+    stack-top) GEN=("$KICAD_PYTHON" advanced-stack/generate_stack.py top) ;;
+    stack-bottom) GEN=("$KICAD_PYTHON" advanced-stack/generate_stack.py bottom) ;;
+  esac
   mkdir -p "$dir/fab" "$dir/renders"
 
   if [[ "$mode" != "outputs" ]]; then
@@ -46,20 +54,12 @@ build() {  # build <variant> <dir> <board name> [outputs]
     fi
 
     echo "== Place"
-    if [[ "$variant" == advanced ]]; then
-      "$KICAD_PYTHON" advanced/generate_advanced.py place "$BOARD" "$CACHE/board.dsn"
-    else
-      "$KICAD_PYTHON" generate_pcb.py place "$BOARD" "$CACHE/board.dsn" "$variant"
-    fi
+    "${GEN[@]}" place "$BOARD" "$CACHE/board.dsn" ${GEN_ARGS[@]+"${GEN_ARGS[@]}"}
     echo "== Route"
     java -jar "$JAR" -de "$CACHE/board.dsn" -do "$CACHE/board.ses" -mp 100 2>&1 \
       | grep -E "Auto-routing stage completed" | sed 's/.*final score/final score/'
     echo "== Pour"
-    if [[ "$variant" == advanced ]]; then
-      "$KICAD_PYTHON" advanced/generate_advanced.py finish "$BOARD" "$CACHE/board.ses"
-    else
-      "$KICAD_PYTHON" generate_pcb.py finish "$BOARD" "$CACHE/board.ses"
-    fi
+    "${GEN[@]}" finish "$BOARD" "$CACHE/board.ses"
   fi
 
   echo "== DRC"
@@ -92,11 +92,12 @@ build() {  # build <variant> <dir> <board name> [outputs]
   echo "Done: $dir/fab/$name-gerbers.zip, $dir/renders/, $dir/bom.csv"
 }
 
-variants=(tht smd advanced)
+variants=(tht smd advanced stack-top stack-bottom)
 mode=all
 for arg in "$@"; do
   case $arg in
     tht|smd|advanced) variants=("$arg") ;;
+    stack) variants=(stack-top stack-bottom) ;;
     outputs) mode=outputs ;;
     *) echo "unknown argument: $arg"; exit 2 ;;
   esac
@@ -106,5 +107,7 @@ for v in "${variants[@]}"; do
     tht) build tht . rc-crane-carrier "$mode" ;;
     smd) build smd smd rc-crane-carrier-smd "$mode" ;;
     advanced) build advanced advanced rc-crane-advanced "$mode" ;;
+    stack-top) build stack-top advanced-stack/top rc-crane-stack-top "$mode" ;;
+    stack-bottom) build stack-bottom advanced-stack/bottom rc-crane-stack-bottom "$mode" ;;
   esac
 done

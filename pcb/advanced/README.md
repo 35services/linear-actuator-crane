@@ -16,6 +16,8 @@ multiplexer between receiver and servos/ESC, or reading the drive channels in "c
 | Assembly | 39 SMD parts by JLCPCB (12 part types, **1 extended**: the PCA9685), the rest hand‑soldered |
 | DRC | 0 violations, 0 unconnected |
 
+> **Smaller footprint?** The same circuit as a [stack of two 84 × 76 mm boards](../advanced-stack/README.md).
+
 > **Status:** the board is designed and checked (DRC, netlist), but not built or tested yet.
 > The current firmware is for the small ESP32‑C3 board; the firmware for this board
 > (4 axes, PCA9685 outputs, CRSF/SBUS, crane mode) is the next step.
@@ -141,7 +143,7 @@ fallback C92206), so one setup fee of about $3. Everything else is a basic part.
 ```
 
 Everything is in [`generate_advanced.py`](generate_advanced.py): the pin map (`ESP_NETS`),
-the parts table and the silkscreen. It reuses the helpers of the carrier board's
-generator. After autorouting it removes vias that only connect one layer, widens the
-router's neck‑downs to 0.15 mm, and adds GND stitching vias so both ground pours are one
-net.
+the parts table and the silkscreen. After autorouting it removes vias that only connect one layer, widens the
+router's neck‑downs to 0.15 mm where the clearance allows, and adds GND stitching vias so
+both ground pours are one net. That code is shared with the stacked boards in
+[`../board_tools.py`](../board_tools.py).

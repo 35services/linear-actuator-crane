@@ -28,6 +28,8 @@ import pcbnew
 from generate_pcb import FP_DIR, add_text, mm, pos, write_bom, write_jlcpcb_files, write_project_rules
 
 HDR = "Connector_PinHeader_2.54mm"
+EDGE_KEEPOUT = 0.9
+MIN_TRACK = 0.125   # smallest neck-down the autorouter leaves (half the 0.25 mm default), fine for JLCPCB
 MODEL_DIR = "${KICAD10_3DMODEL_DIR}"
 
 
@@ -54,8 +56,8 @@ def add_vertical_text(board, text, x, y, size):
 
 
 def setup_net_classes(board, d):
-    # the autorouter necks tracks down next to fine-pitch pads; they are widened to 0.15 mm in finish()
-    board.GetDesignSettings().m_TrackMinWidth = mm(0.15)
+    # the autorouter necks tracks down to fit past pads; finish() widens them where there's room
+    board.GetDesignSettings().m_TrackMinWidth = mm(MIN_TRACK)
     ns = board.GetDesignSettings().m_NetSettings
     default = ns.GetDefaultNetclass()
     default.SetTrackWidth(mm(d.DEFAULT_TRACK))
@@ -249,6 +251,10 @@ def place(d, board_path, dsn_path):
 
     for keepout in d.KEEPOUTS:
         add_keepout(board, *keepout)
+    # the autorouter ignores the board edge clearance: keep tracks out of a thin border
+    w, h, e = d.BOARD_W, d.BOARD_H, EDGE_KEEPOUT
+    for keepout in ((0, 0, w, e), (0, h - e, w, h), (0, 0, e, h), (w - e, 0, w, h)):
+        add_keepout(board, *keepout)
     for ref, pad_numbers in d.GROUND_STUBS:
         ground_stub(board, board.FindFootprintByReference(ref), pad_numbers)
 
@@ -262,7 +268,7 @@ def place(d, board_path, dsn_path):
     pro_path = os.path.splitext(board_path)[0] + ".kicad_pro"
     with open(pro_path) as f:
         pro = json.load(f)
-    pro["board"]["design_settings"].setdefault("rules", {})["min_track_width"] = 0.15
+    pro["board"]["design_settings"].setdefault("rules", {})["min_track_width"] = MIN_TRACK
     with open(pro_path, "w") as f:
         json.dump(pro, f, indent=2)
     out_dir = os.path.dirname(os.path.abspath(board_path))
@@ -316,10 +322,28 @@ def remove_dangling_tracks(board):
         removed += len(dangling)
 
 
-def widen_necked_tracks(board, width=0.15):
+def widen_necked_tracks(board, width=0.15, clearance=0.25):
+    """The autorouter necks tracks down to fit them past pads. Widens them back to `width` where
+    the copper around still keeps `clearance`; the rest stay as they are (min. MIN_TRACK)."""
+    items = [t for t in board.GetTracks()] + [p for fp in board.GetFootprints() for p in fp.Pads()]
+    widened = kept = 0
     for t in board.GetTracks():
-        if t.Type() != pcbnew.PCB_VIA_T and t.GetWidth() < mm(width):
-            t.SetWidth(mm(width))
+        if t.Type() == pcbnew.PCB_VIA_T or t.GetWidth() >= mm(width):
+            continue
+        old = t.GetWidth()
+        t.SetWidth(mm(width))
+        layer = t.GetLayer()
+        shape = t.GetEffectiveShape(layer)
+        box = t.GetBoundingBox()
+        box.Inflate(mm(clearance + 1))
+        hit = any(o.GetNetCode() != t.GetNetCode() and o.IsOnLayer(layer) and box.Intersects(o.GetBoundingBox())
+                  and o.GetEffectiveShape(layer).Collide(shape, mm(clearance)) for o in items if o is not t)
+        if hit:
+            t.SetWidth(old)
+            kept += 1
+        else:
+            widened += 1
+    return widened, kept
 
 
 def dist_to_segment(p, a, b):
@@ -385,10 +409,10 @@ def finish(d, board_path, ses_path):
         sys.exit("SES import failed")
     removed = remove_redundant_vias(board)
     removed_tracks = remove_dangling_tracks(board)
-    widen_necked_tracks(board)
+    widened, kept = widen_necked_tracks(board)
     stitched = stitch_ground(board, d)
     print(f"removed {removed} redundant vias and {removed_tracks} dead-end tracks, "
-          f"added {stitched} GND stitching vias")
+          f"widened {widened} necked tracks ({kept} kept narrow), added {stitched} GND stitching vias")
 
     gnd = board.FindNet("GND")
     for layer in (pcbnew.F_Cu, pcbnew.B_Cu):
@@ -400,6 +424,7 @@ def finish(d, board_path, ses_path):
         zone.SetPadConnection(pcbnew.ZONE_CONNECTION_THERMAL)
         zone.SetThermalReliefGap(mm(0.4))
         zone.SetThermalReliefSpokeWidth(mm(0.5))
+        zone.SetIslandRemovalMode(pcbnew.ISLAND_REMOVAL_MODE_ALWAYS)  # drop pour fragments that connect nothing
         o = zone.Outline()
         o.NewOutline()
         for x, y in [(0.3, 0.3), (d.BOARD_W - 0.3, 0.3), (d.BOARD_W - 0.3, d.BOARD_H - 0.3), (0.3, d.BOARD_H - 0.3)]:

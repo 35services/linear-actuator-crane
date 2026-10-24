@@ -7,7 +7,8 @@
 **All CAD renderings and printable STLs:** [`cad/`](cad/README.md). **Carrier PCB, ready to order:**
 [`pcb/`](pcb/README.md), as a through‑hole version for hand soldering or an SMD version
 assembled by JLCPCB. **Advanced board** with an ESP32‑S3, 4 stepper drivers, 16 servo/ESC
-outputs, RC and CRSF/SBUS inputs: [`pcb/advanced/`](pcb/advanced/README.md). The concept sketch
+outputs, RC and CRSF/SBUS inputs: [`pcb/advanced/`](pcb/advanced/README.md), or the same as a
+[stack of two smaller boards](pcb/advanced-stack/README.md). The concept sketch
 that started it is [`gemini.jpeg`](gemini.jpeg).
 
 Drive two mini stepper‑motor linear actuators (2‑phase, 4‑wire, lead screw + slider) from

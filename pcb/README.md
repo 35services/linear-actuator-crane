@@ -22,9 +22,12 @@ There are **two variants with the same layout and connectors**:
 
 **Need more?** The [advanced board](advanced/README.md) takes an ESP32‑S3‑DevKitC‑1, **4**
 TMC2209 drivers, a PCA9685 with **16 servo/ESC outputs**, 4 RC inputs and a CRSF/SBUS port
-(100 × 100 mm, SMD assembled by JLCPCB).
+(100 × 100 mm, SMD assembled by JLCPCB). The same circuit also comes as a
+[stack of two 84 × 76 mm boards](advanced-stack/README.md) for about half the footprint.
 
-[![advanced board](advanced/renders/board_3d.png)](advanced/README.md)
+| [Advanced, single board](advanced/README.md) | [Advanced, stacked: top](advanced-stack/README.md) | [stacked: bottom](advanced-stack/README.md) |
+|---|---|---|
+| ![advanced board](advanced/renders/board_3d.png) | ![stack top](advanced-stack/top/renders/board_3d.png) | ![stack bottom](advanced-stack/bottom/renders/board_3d.png) |
 
 ---
 
@@ -102,7 +105,7 @@ parts have none). This is the list to revisit when the assembly price matters.
 | Board | Part | LCSC | Status |
 |---|---|---|---|
 | SMD carrier | 100 µF 35 V electrolytic, 6.3×7.7 mm (C1, C2) | [C2836442](https://www.lcsc.com/product-detail/C2836442.html) | **Dropped:** C1/C2 are now THT and hand‑soldered. The SMD carrier has no extended parts |
-| [Advanced board](advanced/README.md) | PCA9685PW,118, 16‑channel PWM, TSSOP‑28 | [C2678753](https://www.lcsc.com/product-detail/C2678753.html) | **Used:** no basic alternative. Fallback [C92206](https://www.lcsc.com/product-detail/C92206.html) (PCA9685PW/Q900, also extended) |
+| [Advanced board](advanced/README.md) and [stack](advanced-stack/README.md) bottom board | PCA9685PW,118, 16‑channel PWM, TSSOP‑28 | [C2678753](https://www.lcsc.com/product-detail/C2678753.html) | **Used:** no basic alternative. Fallback [C92206](https://www.lcsc.com/product-detail/C92206.html) (PCA9685PW/Q900, also extended) |
 
 Check the current status and stock of every part in the JLCPCB BOMs, or of single parts:
 
@@ -187,6 +190,8 @@ This needs KiCad 10 (`brew install --cask kicad`) and Java 21+. The
 [Freerouting](https://github.com/freerouting/freerouting) autorouter is downloaded into
 `pcb/.cache/` on first run.
 
+* **Advanced boards:** `./pcb/build.sh advanced`, `./pcb/build.sh stack`. Their generators
+  only hold tables; the board building is shared in [`board_tools.py`](board_tools.py).
 * **Changing the circuit:** everything is in tables at the top of
   [`generate_pcb.py`](generate_pcb.py).
   * `PARTS`: the THT parts, each a footprint, its position and a pad → net map.
