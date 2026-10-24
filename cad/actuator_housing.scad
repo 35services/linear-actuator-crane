@@ -66,6 +66,8 @@ screw_clear = 2.4;
 
 $fn = 48;
 
+include <actuator_common.scad>
+
 // ------------------------------------------------------------ derived ----
 
 frame_x0 = motor_len;
@@ -166,24 +168,16 @@ module tray() {
       // shell
       translate([house_x0, -out_y, floor_z - wall]) cube([house_x1 - house_x0, 2 * out_y, lid_z - floor_z + wall]);
       // screw ears, with a 45° gusset so they print without support
-      for (x = ear_xs, s = [-1, 1]) hull() {
-        translate([x - ear_w / 2, s > 0 ? out_y - 0.01 : -out_y - ear_w + 0.01, lid_z - 4]) cube([ear_w, ear_w, 4]);
-        translate([x - ear_w / 2, s > 0 ? out_y - 0.01 : -out_y - 0.01, lid_z - 4 - ear_w]) cube([ear_w, 0.02, 1]);
-      }
+      for (x = ear_xs, s = [-1, 1]) tray_ear(x, s, out_y, lid_z, ear_w);
       // rear mounting boss, sloped down to the floor so it prints without support
-      hull() {
-        translate([rear_end, 0, 0]) rotate([0, 90, 0]) cylinder(d = mount_d, h = mount_len + 0.01);
-        translate([house_x0 - 0.01, -mount_d / 2, floor_z - wall]) cube([0.01, mount_d, 1]);
-        translate([rear_end, -mount_d / 2, floor_z - wall + (mount_len)]) cube([mount_len, mount_d, 0.01]);
-      }
+      rear_boss(rear_end, house_x0, floor_z - wall, mount_d, mount_len);
     }
     // inside, open at the front (ram exit) and at the top (lid)
     translate([rear_in, -in_y, floor_z]) cube([house_x1 - rear_in + 1, 2 * in_y, lid_z - floor_z + 1]);
     // cable exit
     translate([house_x0 - 1, cable_y, -4]) rotate([0, 90, 0]) cylinder(d = 5, h = wall + 2);
-    for (x = ear_xs, s = [-1, 1])
-      translate([x, s * (out_y + ear_w / 2), lid_z - 5]) cylinder(d = screw_pilot, h = 6);
-    translate([rear_end - 1, 0, 0]) rotate([0, 90, 0]) cylinder(d = insert_d, h = insert_depth + 1);
+    for (x = ear_xs, s = [-1, 1]) ear_hole(x, s, out_y, lid_z - 5, screw_pilot, 6, ear_w);
+    insert_hole_rear(rear_end, insert_d, insert_depth);
   }
   // lower motor cradle
   difference() {
@@ -198,14 +192,12 @@ module lid() {
   difference() {
     union() {
       translate([house_x0, -out_y, lid_z]) cube([house_x1 - house_x0, 2 * out_y, wall]);
-      for (x = ear_xs, s = [-1, 1])
-        translate([x - ear_w / 2, s > 0 ? out_y - 0.01 : -out_y - ear_w + 0.01, lid_z]) cube([ear_w, ear_w, wall]);
+      for (x = ear_xs, s = [-1, 1]) lid_ear(x, s, out_y, lid_z, wall, ear_w);
       // upper motor cradle
       translate([0, -in_y + 0.2, 0.3]) cube([motor_len, 2 * in_y - 0.4, lid_z]);
     }
     motor_bore();
-    for (x = ear_xs, s = [-1, 1])
-      translate([x, s * (out_y + ear_w / 2), lid_z - 1]) cylinder(d = screw_clear, h = wall + 2);
+    for (x = ear_xs, s = [-1, 1]) ear_hole(x, s, out_y, lid_z - 1, screw_clear, wall + 2, ear_w);
   }
 }
 
@@ -230,9 +222,7 @@ module enclosed_actuator(e) {
 // ---------------------------------------------------------------- scene ----
 
 // removes everything on the near side (y < -y_keep) for the section view
-module near_side_cut(y_keep) {
-  translate([house_x0 - 50, -50, -50]) cube([house_x1 - house_x0 + 300, 50 - y_keep + 0.01, 100]);
-}
+module near_side_cut(y_keep) { section_cut(house_x0, house_x1, y_keep); }
 
 if (part == "tray") {
   translate([0, 0, -(floor_z - wall)]) tray();

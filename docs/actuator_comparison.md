@@ -1,31 +1,34 @@
-# Linear actuators compared – stepper vs. DC lead screw vs. DC with limit switches
+# Linear actuators compared – steppers, DC lead screws and limit switches
 
 The crane currently uses a **mini stepper slider** (see the [main README](../README.md)).
 Goal of this comparison: find the cheapest actuator whose **end positions can be detected
 without extra switches**, and compare it against actuators that bring their own limit
-switches.
+switches. Options 4 and 5 are a printed lead‑screw actuator around the very cheap 28BYJ‑48
+geared stepper, designed in this repo ([`cad/actuator_28byj.scad`](../cad/README.md#28byj-48-lead-screw-actuator--actuator_28byjscad)).
 
-| | 1. Stepper slider (current) | 2. DC micro cylinder, 3–6 V | 3. DC mini actuator, 12 V, limit switches |
-|---|---|---|---|
-| Photo | ![stepper](actuator_photo.png) | ![dc micro](actuators/dc_micro_cylinder.jpg) | ![12 V](actuators/dc_12v_limit_switch.jpg) |
-| Listing | [AliExpress](https://de.aliexpress.com/item/1005005779515640.html) | [AliExpress](https://a.aliexpress.com/_EyGPNzg) | [AliExpress, 10–25 mm](https://a.aliexpress.com/_Ez364hU), [AliExpress, 30 mm](https://a.aliexpress.com/_EzM5tL8) |
-| Drive | 2‑phase stepper, 18°, M3 lead screw 0.5 mm | brushed DC gear motor + lead screw (2 wires) | brushed DC gear motor + lead screw (2 wires) |
-| Supply | driver: 4.75–28 V (BEC is fine) | **3–6 V** (BEC 6 V setting) | **12 V** (3S LiPo or boost converter) |
-| Stroke | **75 mm** | 10 / 15 / 20 / 25 mm | 10 / 15 / 20 mm, and 30 mm (second listing) |
-| Length, retracted | 132.5 mm in the [printed housing](../cad/README.md#enclosed-actuator--actuator_housingscad) | 66 / 71 / 76 / 81 mm (pin to pin) | compact gearbox block + rod, see photo |
-| Force | small motor, lots of force from the 0.5 mm lead (not measured yet) | **not stated – measure** | **30 / 60 / 100 / 150 N** (versions) |
-| Speed | 15–20 mm/s realistic, see [Speed](../README.md#speed-how-fast-can-it-move) | not stated – measure | **15 mm/s** at 60 N (label); stronger versions are slower |
-| Holds position unpowered | yes (lead screw) | probably (lead screw + gearbox) – check | usually (lead screw + gearbox) – check |
-| Position known | **exactly** (step counting) after homing | only at the ends; in between estimated (time) | only at the ends; in between estimated (time) |
-| End detection | StallGuard via DIAG, or hard‑stop homing | **current rise at stall** (this document) | **built‑in limit switches** cut the motor |
-| Driver per actuator | TMC2209 StepStick (~€3–4) | small H‑bridge with current sense | any H‑bridge, current sense optional |
-| ESP pins per actuator | STEP + DIR (+ shared UART, EN, DIAG) | 2 PWM + 1 ADC | 2 PWM |
-| Mounting | needs the 3D printed housing | eyes on both ends, ready to use | eyes on both ends, brackets included |
-| Look on a 1:8 model | printed box | **looks like a hydraulic cylinder** | black gearbox block |
+| | 1. Stepper slider (current) | 2. DC micro cylinder, 3–6 V | 3. DC mini actuator, 12 V, limit switches | 4. 28BYJ‑48 + T8 screw, TMC2209 | 5. 28BYJ‑48 + T8 screw, ULN2003 board |
+|---|---|---|---|---|---|
+| Photo | ![stepper](actuator_photo.png) | ![dc micro](actuators/dc_micro_cylinder.jpg) | ![12 V](actuators/dc_12v_limit_switch.jpg) | ![28BYJ](actuators/28byj48.jpg) | ![28BYJ + ULN2003](actuators/28byj48_uln2003.jpg) |
+| Listing | [AliExpress](https://de.aliexpress.com/item/1005005779515640.html) | [AliExpress](https://a.aliexpress.com/_EyGPNzg) | [AliExpress, 10–25 mm](https://a.aliexpress.com/_Ez364hU), [AliExpress, 30 mm](https://a.aliexpress.com/_EzM5tL8) | [AliExpress](https://de.aliexpress.com/item/1005008207445943.html) (5 V version) + T8 screw | same, use the ULN2003 board that comes with it |
+| Drive | 2‑phase stepper, 18°, M3 lead screw 0.5 mm | brushed DC gear motor + lead screw (2 wires) | brushed DC gear motor + lead screw (2 wires) | geared stepper 1:64, **bipolar mod**, T8 screw | geared stepper 1:64, unipolar as shipped, T8 screw |
+| Supply | driver: 4.75–28 V (BEC is fine) | **3–6 V** (BEC 6 V setting) | **12 V** (3S LiPo or boost converter) | BEC, current set by the driver | **BEC 6 V**: the ULN2003 drops ~1 V, so the 5 V motor gets about 5 V |
+| Stroke | **75 mm** | 10 / 15 / 20 / 25 mm | 10 / 15 / 20 mm, and 30 mm (second listing) | **75 mm** (any, parametric) | **75 mm** (any, parametric) |
+| Length, retracted | 132.5 mm in the [printed housing](../cad/README.md#enclosed-actuator--actuator_housingscad) | 66 / 71 / 76 / 81 mm (pin to pin) | compact gearbox block + rod, see photo | 182 mm (printed housing) | 182 mm (printed housing) |
+| Force | small motor, lots of force from the 0.5 mm lead (not measured yet) | **not stated – measure** | **30 / 60 / 100 / 150 N** (versions) | ≈ 14 N with T8×8, ≈ 50 N with T8×2 (estimate) | a bit less than 4 (unipolar) |
+| Speed | 15–20 mm/s realistic, see [Speed](../README.md#speed-how-fast-can-it-move) | not stated – measure | **15 mm/s** at 60 N (label); stronger versions are slower | **≈ 2.7 mm/s** (T8×8, 20 rpm) – slow | ≈ 2 mm/s (T8×8, ~15 rpm) – slow |
+| Holds position unpowered | yes (lead screw) | probably (lead screw + gearbox) – check | usually (lead screw + gearbox) – check | **yes** (gearbox + screw) | **yes** |
+| Position known | **exactly** (step counting) after homing | only at the ends; in between estimated (time) | only at the ends; in between estimated (time) | **exactly** (step counting) | **exactly** (step counting) |
+| End detection | StallGuard via DIAG, or hard‑stop homing | **current rise at stall** (this document) | **built‑in limit switches** cut the motor | hall sensor (in the CAD), StallGuard (weak here), hard stop | **hall sensor** (in the CAD) or hard stop – no current info |
+| Driver per actuator | TMC2209 StepStick (~€3–4) | small H‑bridge with current sense | any H‑bridge, current sense optional | TMC2209 StepStick | **ULN2003 board, included** |
+| ESP pins per actuator | STEP + DIR (+ shared UART, EN, DIAG) | 2 PWM + 1 ADC | 2 PWM | STEP + DIR (+ shared) | 4 outputs (or 3 pins for all via shift registers) + 1 hall input |
+| Mounting | needs the 3D printed housing | eyes on both ends, ready to use | eyes on both ends, brackets included | printed housing, M3 inserts both ends | printed housing, M3 inserts both ends |
+| Look on a 1:8 model | printed box | **looks like a hydraulic cylinder** | black gearbox block | printed box with a motor bump | printed box with a motor bump |
 
-Prices change too often to list; check the listings. Rough order: the DC micro cylinder is
-the cheapest per axis, the stepper slider plus driver is in between, the 12 V actuator with
-limit switches is the most expensive.
+Prices change too often to list; check the listings. Rough order: the 28BYJ‑48 is by far the
+cheapest motor (under €2 with its board); with screw, nut and bearing a 28BYJ actuator is
+still the cheapest axis with **exact** position. The DC micro cylinder is cheap but needs a
+sense driver, the stepper slider plus driver is in between, the 12 V actuator with limit
+switches is the most expensive.
 
 ### The DC micro cylinder (option 2)
 
@@ -49,6 +52,35 @@ the polarity always works, so the controller needs no end detection at all. (How
 particular ones are wired isn't in the listing – check with a multimeter.)
 
 *Photos: from the AliExpress listings linked above.*
+
+---
+
+### The 28BYJ-48 lead screw actuator (options 4 and 5)
+
+| Motor + ULN2003 board (from the listing) | Printed actuator, section ([`actuator_28byj.scad`](../cad/actuator_28byj.scad)) |
+|---|---|
+| ![28BYJ + ULN2003](actuators/28byj48_uln2003.jpg) | ![section](../cad/renders/actuator_28byj_section.png) |
+
+The 28BYJ‑48 is a geared stepper (1:64, 2048 full steps per turn). It costs under €2,
+including a ULN2003 driver board. On its own it turns, it doesn't push, so the printed
+actuator adds a **T8 lead screw**, a **brass flange nut** in a square ram, and a **688 bearing**
+that carries all push and pull loads, so the motor's plastic gearbox only has to turn the
+screw. Details, parts list and print notes in the [CAD README](../cad/README.md#28byj-48-lead-screw-actuator--actuator_28byjscad).
+
+* **Slow but strong:** about 15–20 rpm at the output. With a T8×8 screw (8 mm per turn) that
+  is ≈ 2.7 mm/s and ≈ 14 N; a T8×2 screw gives ≈ 0.7 mm/s and ≈ 50 N (estimates from the
+  motor's torque, measure yours). The boom lift (49.6 mm) takes about 19 s with T8×8,
+  compared with 2.5 s for the stepper slider. Fine for a slow, realistic crane, a telescope or
+  a winch, too slow for anything snappy.
+* **Exact position** like the slider: 256 full steps per mm with T8×8.
+* **Two ways to drive it:**
+  * **Option 4 – TMC2209**, after the [bipolar mod](#28byj-48-and-the-tmc2209-bipolar-mod):
+    plugs into the existing boards, current control, quiet. StallGuard is weak on this motor.
+  * **Option 5 – the ULN2003 board** it comes with: no mod, no extra driver, but 4 signals
+    per motor and no current information at all, see below.
+* **Home sensor built into the CAD:** a 5 × 2 mm magnet in the ram and a hall sensor
+  (A3144, TO‑92) in a pocket under the floor mark the retracted end. That works with every
+  driver.
 
 ---
 
@@ -106,6 +138,73 @@ gears when it hits the end on every homing run.
   currents change. Measure both once and keep the threshold as a [web setting](../README.md#web-settings-page).
 * **Wear:** with a hard current limit it's gentle, but every homing still presses the
   mechanical end stop.
+
+---
+
+## 28BYJ-48: end stops, ULN2003 boards and 4 motors
+
+### 28BYJ-48 and the TMC2209: bipolar mod
+
+The 28BYJ‑48 is unipolar (5 wires, red = common center tap). The TMC2209 needs two separate
+coils: lift the blue cover, **cut the trace that joins the red wire to both coils**, leave red
+unconnected. Then orange + pink is one coil and yellow + blue the other (check with a
+multimeter: each pair reads twice the listed coil resistance, no connection between pairs).
+Use the **5 V version** and set the run current to about 100 mA; with ~100 Ω per coil the
+BEC voltage limits it anyway.
+
+### End stop detection with the ULN2003
+
+The ULN2003 is just 7 transistor switches: it puts the full supply voltage on a coil, with no
+current control and no feedback. So the motor can't tell us where the end is:
+
+| Method | Works with ULN2003? | Notes |
+|---|---|---|
+| **Hall sensor + magnet** | ✅ **recommended** | Already in the CAD: magnet in the ram, A3144 under the floor. Exact, no wear, ~€0.20. One per actuator, for the retracted (home) end; the other end comes from step counting |
+| Micro switch | ✅ | Works the same way, needs room and a lever |
+| Hard‑stop homing | ⚠️ | Drive the full stroke + margin towards home and let the motor skip steps at the stop. The 28BYJ is weak enough that nothing breaks, but it rattles, and with a lead screw the nut jams a little. PWM on the IN pins lowers the coil current for the homing run |
+| Current sensing | ❌ | A stepper on a constant‑voltage driver draws almost the same current whether it turns or stalls (at these low speeds there's hardly any back‑EMF). Nothing to detect |
+| StallGuard | ❌ | Only exists inside TMC drivers |
+
+### Integrating 4 ULN2003 boards
+
+Each ULN2003 board needs **4 inputs** (IN1–IN4), **+5–12 V** and **GND**; it takes 3.3 V logic
+directly. 4 motors = 16 signals, which is too many for direct GPIOs on the boards we have.
+
+| Way | ESP pins for 4 motors | Notes |
+|---|---|---|
+| **2 × 74HC595 shift registers** (recommended) | **3** (data, clock, latch) | One SPI write updates all 16 outputs in a few µs, every step. 74HC595D is a JLCPCB basic part ([C5947](https://www.lcsc.com/product-detail/C5947.html)) |
+| Direct GPIOs | 16 | The advanced board's TMC pins (STEP/DIR/EN/UART/DIAG) free up 15 – not quite enough |
+| PCA9685 outputs set fully on/off | 0 extra | Possible, but every step needs an I²C write (~1.6 ms for 16 channels), so ~600 steps/s for all motors together – just about enough for the slow 28BYJ, wastes the servo outputs |
+| MCP23017 I/O expander | 2 (I²C) | Like the PCA9685: works, I²C limits the step rate |
+
+**Power:** a 28BYJ‑48 draws 0.15–0.25 A at 5 V (two coils on), 4 motors up to 1 A. Feed the
+boards from the **BEC on its 6 V setting**: the ULN2003 drops about 1 V, so the 5 V motors
+get roughly 5 V. On 7.4 V they run hotter; switch all coils off when a motor stands still
+(the gearbox and the lead screw hold the position anyway).
+
+### Drivers at the motors: a small hub board
+
+Your idea, and it fits the ULN2003 well: **leave the ULN2003 board at the motor** (it can sit on
+the actuator housing) and run one thin cable per actuator to a small central board.
+
+```
+                 7-wire cable per actuator (e.g. JST-XH 7 or Dupont)
+  ┌──────────────────────┐   +V  GND  IN1  IN2  IN3  IN4  HOME
+  │ hub board            │══════════════════════════════════════► ULN2003 board ──► 28BYJ-48
+  │  ESP32-C3 SuperMini  │══════════════════════════════════════► ULN2003 board ──► 28BYJ-48
+  │  2 × 74HC595         │══════════════════════════════════════► ULN2003 board ──► 28BYJ-48
+  │  RC inputs / CRSF    │══════════════════════════════════════► ULN2003 board ──► 28BYJ-48
+  │  BEC in (6 V)        │                     HOME ◄── hall sensor in each actuator housing
+  └──────────────────────┘
+```
+
+* **ESP32‑C3 pins:** 3 for the shift registers, 4 hall inputs, 4 RC inputs (or one CRSF/SBUS
+  input) – 11 of the SuperMini's 13. WiFi web settings as now.
+* **Board:** the SuperMini in sockets, 2 × 74HC595, 4 output connectors, RC headers, BEC input.
+  No driver modules, no regulators beyond the SuperMini's own: about **50 × 40 mm**.
+* **Even smaller per‑motor nodes** are possible later: a tiny board with a ULN2003ADR
+  ([C7512](https://www.lcsc.com/product-detail/C7512.html), basic) and a 74HC595 per actuator,
+  daisy‑chained on a 5‑wire bus. More custom boards, fewer wires through the crane.
 
 ---
 
@@ -179,18 +278,19 @@ current‑sense ADC inputs need ESP pins.
 
 ## Summary
 
-| | Stepper slider | DC micro cylinder + current sense | DC 12 V with limit switches |
-|---|---|---|---|
-| Position accuracy | **exact** | estimated between the ends | estimated between the ends |
-| End detection | StallGuard / hard stop | current rise, needs a sense driver and tuning | **built in**, no tuning |
-| Cost per axis | medium | **lowest** | highest |
-| Fits 1:8 | needs a housing, 132 mm long | **small, looks right** | compact, 12 V needed |
-| Stroke | **75 mm** | 10–25 mm | 10–30 mm |
-| Force | good (measure) | unknown, probably low – measure | **specified, up to 150 N** |
-| Board support today | **yes** (all boards) | no – needs a DC driver variant | via mini brushed ESCs on PCA9685 outputs; otherwise a DC driver variant |
+| | Stepper slider | DC micro cylinder + current sense | DC 12 V with limit switches | 28BYJ + T8, TMC2209 | 28BYJ + T8, ULN2003 |
+|---|---|---|---|---|---|
+| Position accuracy | **exact** | estimated between the ends | estimated between the ends | **exact** | **exact** |
+| End detection | StallGuard / hard stop | current rise, needs a sense driver and tuning | **built in**, no tuning | hall sensor (CAD), hard stop | hall sensor (CAD), hard stop |
+| Cost per axis | medium | low | highest | **lowest** (plus screw and nut) | **lowest**, driver included |
+| Speed | **15–20 mm/s** | measure | 15 mm/s | ≈ 2.7 mm/s | ≈ 2 mm/s |
+| Fits 1:8 | needs a housing, 132 mm long | **small, looks right** | compact, 12 V needed | housing 182 mm, motor bump | housing 182 mm, motor bump |
+| Stroke | **75 mm** | 10–25 mm | 10–30 mm | any (printed) | any (printed) |
+| Force | good (measure) | unknown, probably low – measure | **specified, up to 150 N** | ≈ 14–50 N (screw lead) | a bit less |
+| Board support today | **yes** (all boards) | no – needs a DC driver variant | via mini brushed ESCs on PCA9685 outputs; otherwise a DC driver variant | **yes**, after the bipolar mod | no – needs the hub board |
 
-**Recommendation for the next step:** buy one DC micro cylinder (20 or 25 mm) and one 12 V
-actuator (60 N, 20 mm) and measure:
+**Recommendation for the next step:** buy one DC micro cylinder (20 or 25 mm), one 12 V
+actuator (60 N, 20 mm) and two 28BYJ‑48 with a T8×8 screw, and measure:
 
 | Test | How |
 |---|---|
@@ -200,6 +300,7 @@ actuator (60 N, 20 mm) and measure:
 | Self‑locking | load the rod with the motor unpowered |
 | End stop survives | 100 homing runs at the planned current limit |
 | Option 3 at 7.4 V | does it still move and switch off at the ends (slower, less force)? |
+| 28BYJ actuator | speed and force with ULN2003 at 6 V and TMC2209 (bipolar mod); does StallGuard give a usable signal; does the hall sensor switch reliably |
 
 With those numbers we can decide whether a DC driver variant of the advanced board makes
 sense, as described in [What our boards need](#what-our-boards-need-to-drive-them).

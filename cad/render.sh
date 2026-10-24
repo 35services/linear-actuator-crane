@@ -51,6 +51,20 @@ for part in tray lid ram; do
   png actuator_housing.scad "actuator_$part.png" 60,0,8,55,0,330,280 -D "part=\"$part\""
 done
 
+# --- 28BYJ-48 lead screw actuator
+for part in tray lid ram coupler collar; do
+  stl actuator_28byj.scad "$part" "actuator_28byj_$part.stl"
+done
+png actuator_28byj.scad actuator_28byj_section.png  62,0,-6,62,0,22,320  -D extension=0
+png actuator_28byj.scad actuator_28byj_extended.png 100,0,-6,58,0,28,460  -D extension=75 -D section=false -D show_lid=true
+png actuator_28byj.scad actuator_28byj_side.png     62,0,-6,90,0,0,400   -D extension=40 --projection=o
+for part in tray lid ram; do
+  png actuator_28byj.scad "actuator_28byj_$part.png" 60,0,10,55,0,330,360 -D "part=\"$part\""
+done
+for part in coupler collar; do
+  png actuator_28byj.scad "actuator_28byj_$part.png" 0,0,6,55,0,330,80 -D "part=\"$part\""
+done
+
 # --- DIAG wire illustration for the carrier PCB
 png diag_wire_example.scad diag_wire_example.png 16,-18,18,62,0,300,125
 
