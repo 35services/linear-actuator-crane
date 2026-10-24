@@ -602,6 +602,9 @@ Do this once per axis:
   almost out of free pins, so this needs the
   [advanced board](pcb/advanced/README.md) (ESP32‑S3, 4 drivers, 16 PWM outputs). Its
   firmware, with the ESP as receiver/multiplexer and a "crane mode" switch, is the next step.
+* **Cheaper actuators:** DC lead‑screw cylinders with current‑based end detection, or 12 V
+  actuators with built‑in limit switches, compared in
+  [`docs/actuator_comparison.md`](docs/actuator_comparison.md).
 * **Smooth stepping while WiFi is busy:** generate the STEP pulses in hardware
   (FastAccelStepper uses the ESP32's RMT peripheral), so the web page also works while
   the crane moves.
