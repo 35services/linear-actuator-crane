@@ -121,7 +121,7 @@ It's worth it only if you want a live camera or telemetry screen in front of you
 
 Make the S3 firmware read just one control input: CRSF on J7, with one failsafe and one
 arming check. ELRS and the Bluepad32 bridge both plug in there. WiFi stays on the S3 for
-setup and telemetry and goes off while the drive is armed, as the current `wifi_off`
+setup and telemetry and goes off while the drive is armed, as the current `wifi_off_s`
 setting already does.
 
 ```
