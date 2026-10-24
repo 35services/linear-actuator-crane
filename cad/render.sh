@@ -43,23 +43,21 @@ GIF_FPS=${GIF_FPS:-15}
 
 gif() {  # [GIF_SIZE=w,h] gif <source.scad> <output.gif> <camera> [-D overrides...]
   # renders one full $t cycle of the model's own animation and loops it
-  local src=$1 out=$2 camera=$3 frames size=${GIF_SIZE:-720,420} try
+  local src=$1 out=$2 camera=$3 frames size=${GIF_SIZE:-720,420} i
   shift 3
   echo "GIF  $out"
   frames=$(mktemp -d)
-  # one log line per frame is too much, only show it when something went wrong.
-  # Under xvfb OpenSCAD now and then dies mid-animation with an X error, so retry.
-  for try in 1 2 3; do
-    if "$OPENSCAD" --hardwarnings -o "$frames/f.png" --animate "$GIF_FRAMES" --camera="$camera" \
-        --imgsize="$size" --colorscheme=Tomorrow -D animate=true "$@" "$src" >"$frames/log" 2>&1; then
-      break
-    fi
-    tail -5 "$frames/log" >&2
-    if [ "$try" = 3 ]; then
+  # One OpenSCAD run per frame: --animate dies with X errors under xvfb on CI. $t can't
+  # be set with -D (2021.01 ignores it), so each frame includes the model from a wrapper.
+  # The log is only shown when something went wrong.
+  for ((i = 0; i < GIF_FRAMES; i++)); do
+    printf '$t = %s / %s;\ninclude <%s>\n' "$i" "$GIF_FRAMES" "$PWD/$src" > "$frames/frame.scad"
+    if ! "$OPENSCAD" --hardwarnings -o "$(printf '%s/f%05d.png' "$frames" "$i")" --camera="$camera" \
+        --imgsize="$size" --colorscheme=Tomorrow -D animate=true "$@" "$frames/frame.scad" \
+        >"$frames/log" 2>&1; then
       cat "$frames/log" >&2
       exit 1
     fi
-    echo "     retrying $out"
   done
   ffmpeg -loglevel error -y -framerate "$GIF_FPS" -i "$frames/f%05d.png" -filter_complex \
     "[0:v]split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" \

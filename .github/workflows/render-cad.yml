@@ -38,9 +38,8 @@ jobs:
           openscad --version
 
       # PNG export needs an OpenGL context, xvfb provides a virtual display
-      # (24 bit colour instead of xvfb-run's default 640x480x8)
       - name: Render STLs, previews and animations
-        run: xvfb-run -a -s "-screen 0 1600x1200x24" ./cad/render.sh
+        run: xvfb-run -a ./cad/render.sh
 
       - name: Upload renders
         uses: actions/upload-artifact@v7
