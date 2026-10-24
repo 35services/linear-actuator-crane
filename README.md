@@ -81,6 +81,8 @@ Features:
    * Without StallGuard (or if no stall is detected), the motor runs for the full stroke
      plus a small margin. At low current it just skips a few steps against the end, which
      does no harm, and that point becomes position 0.
+   * Optionally, homing is skipped after a clean stop, see
+     [Skipping homing after a clean stop](#skipping-homing-after-a-clean-stop).
 3. **Run:** each RC channel controls one actuator, in either
    * **Position mode:** stick or knob position = actuator position. The default for the
      boom lift, best on a knob or slider.
@@ -570,17 +572,20 @@ change, so it always matches the firmware.
 | Group | Settings |
 |---|---|
 | Motion | max speed (default 5 mm/s, see [Speed](#speed-how-fast-can-it-move)), acceleration, homing speed |
+| Homing | skip homing after a clean stop (default: no, home on every boot), see [below](#skipping-homing-after-a-clean-stop) |
 | RC | stick deadband in rate mode |
 | WiFi | seconds without a connected client until WiFi switches off (default 20, 0 = never) |
 | per axis | stroke, RC control (position / rate), run and homing current, stall threshold, invert direction |
 
 * **Save** applies the values right away and stores them in flash (NVS), so they survive a
   restart. Changed values are highlighted; each row shows its default. **Defaults** clears
-  the stored values. **Restart + home** restarts the ESP32.
+  the stored values. **Restart + home** restarts the ESP32, and it always homes, even with
+  *Skip homing* on.
 * **Invert direction** only takes effect after a restart, because the homed position would
   be mirrored otherwise.
-* **Live** shows uptime, whether the drivers are on, and per axis the position, target and
-  RC stick value (or "no signal"). Useful to check the receiver and the stroke.
+* **Live** shows uptime, whether the drivers are on, whether the crane homed at boot or
+  skipped it, and per axis the position, target and RC stick value (or "no signal").
+  Useful to check the receiver and the stroke.
 * The values in the sketch (`maxSpeedMmS`, the `AXES` table, …, marked `[web]`) are the
   defaults. The serial monitor lists all current values at boot, `(changed)` marks the
   ones from flash.
@@ -603,6 +608,27 @@ change, so it always matches the firmware.
   If the value has to be passed on to the drivers, do it in `Axis::applySettings()`.
 * The API can also be scripted: `GET /api/settings`, `POST /api/settings` (form fields
   `key=value`), `POST /api/reset`, `POST /api/restart`, `GET /api/status`.
+
+### Skipping homing after a clean stop
+
+Homing on every boot is the safe default. If you set **Homing → Skip homing after a clean
+stop** to *yes*, the crane can start where it was switched off instead:
+
+* When both axes stand still and the drivers switch off (0.5 s after the last move), the
+  ESP32 stores the positions in flash (NVS) and marks them valid. The lead screws hold the
+  sliders in place without current.
+* Before the first step of the next move, it marks them invalid again. If the power drops
+  mid‑move, the next boot homes as usual.
+* At boot it skips homing only if the stored positions are valid, were stored with the same
+  steps/mm and *Invert direction* setting, and lie within the stroke. Otherwise it homes.
+* After **Restart + home** on the web page or a `TUNE_STALLGUARD` run, the next boot
+  always homes.
+
+It can't detect steps lost *during* a move (an overload, or something blocking the
+slider), so the position may be off until the next homing. Use **Restart + home** if an
+axis doesn't reach its ends any more. One stop‑and‑move cycle writes about four 32‑byte
+NVS entries (unchanged values aren't rewritten), and NVS spreads its writes over the whole
+partition, so flash wear isn't a concern for a hobby crane.
 
 ### Tuning sensorless homing
 
@@ -643,5 +669,7 @@ Do this once per axis:
   (FastAccelStepper uses the ESP32's RMT peripheral), so the web page also works while
   the crane moves. Then WiFi no longer has to switch off 20 s after homing, and the default
   `wifi_off_s` can go back up to several minutes (or 0 = always on).
-* Store the last positions in NVS and skip homing after a clean shutdown. It's risky if
-  power drops mid‑move, so homing on every boot is the safe default.
+* ✅ **Done 2026-10-24 11:25 CEST:** ~~Store the last positions in NVS and skip homing after a
+  clean shutdown. It's risky if power drops mid‑move, so homing on every boot is the safe
+  default.~~ Opt‑in setting, see
+  [Skipping homing after a clean stop](#skipping-homing-after-a-clean-stop).
