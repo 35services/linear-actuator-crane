@@ -380,6 +380,8 @@ boom and the telescope actuator on top.
 
 * Change `attach_d`, `pivot_h`, `outer_len`/`inner_len` and the boom range to trade reach
   and lift range against force.
+* `outriggers = true` adds two feet that fold down under the chassis, driven through bowden
+  tubes by a third actuator: [`cad/use-cases/`](cad/use-cases/README.md).
 
 ### Speed: how fast can it move?
 
@@ -662,6 +664,9 @@ Do this once per axis:
   and around the N20 DC gear motor with M4 screw
   ([`cad/n20_actuator.scad`](cad/README.md#n20-dc-lead-screw-actuator--n20_actuatorscad), 80 mm stroke).
   All compared in [`docs/actuator_comparison.md`](docs/actuator_comparison.md).
+* **The actuator at a distance:** drive through a bowden tube (1.75 mm PETG filament in
+  PTFE, like a 3D printer's bowden extruder) – outriggers that fold under the chassis, and
+  a crane with both actuators flat on the deck: [`cad/use-cases/`](cad/use-cases/README.md).
 * **Controlling the whole vehicle:** RC/ELRS, a PlayStation controller via Bluepad32, or
   a WiFi Android app (with or without a gamepad on the phone), and what each means for the
   failsafe: [`docs/remote_control_comparison.md`](docs/remote_control_comparison.md).

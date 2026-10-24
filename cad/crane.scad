@@ -2,11 +2,16 @@
 // stepper linear actuators (actuator_housing.scad). Rough visual model, not
 // print-ready. All dimensions in mm.
 //
+// Option `outriggers`: two feet that fold down under the chassis, driven through
+// bowden tubes by a third actuator lying flat under the chassis
+// (use-cases/bowden_outriggers.scad, explained in use-cases/README.md).
+//
 // View > Animate (FPS 10, Steps 60) to sweep the boom and telescope through
 // their range. The console echoes the stroke the lift geometry needs, the
 // tip-force ratio and the speeds, so you can check them before building anything.
 
 use <actuator_housing.scad>
+use <use-cases/bowden_outriggers.scad>
 
 /* [Pose] */
 animate      = true;
@@ -15,6 +20,10 @@ tele_ext     = 15;     // telescope extension, used when animate = false
 boom_min     = 0;      // degrees above horizontal
 boom_max     = 55;
 slew_angle   = 25;     // turntable rotation, just for the picture
+
+/* [Outriggers] */
+outriggers       = true;  // bowden outriggers, see use-cases/README.md
+outrigger_deploy = 1;     // 0 = folded in, 1 = down; used when animate = false
 
 /* [Boom geometry] */
 outer_len    = 140;    // outer section, pivot to front end
@@ -53,6 +62,8 @@ $fn = 48;
 theta = animate ? boom_min + (boom_max - boom_min) * (0.5 - 0.5 * cos(360 * $t))
                 : boom_angle;
 tele  = animate ? stroke * (0.5 - 0.5 * cos(720 * $t)) : min(tele_ext, stroke);
+// the feet go down at the start of the cycle and fold in at its end
+feet  = animate ? min(1, 4 * (0.5 - 0.5 * cos(360 * $t))) : outrigger_deploy;
 
 // --- lift geometry in the boom plane (x forward, z up), origin = lift actuator base pivot B
 P = [0, pivot_h - base_pivot_h];                  // boom pivot
@@ -113,7 +124,7 @@ module vehicle() {
 module electronics_box() {
   color("steelblue") translate([-95, -30, 0]) cube([50, 60, 25]);
   color("white") translate([-70, 0, 25]) linear_extrude(0.6)
-    text("ESP32+2xTMC2209", size = 3.6, halign = "center", valign = "center");
+    text(outriggers ? "ESP32+3xTMC2209" : "ESP32+2xTMC2209", size = 3.6, halign = "center", valign = "center");
 }
 
 module mast() {
@@ -177,6 +188,7 @@ module actuator(extension, rod = rod_len) {
 
 vehicle();
 electronics_box();
+if (outriggers) bowden_outriggers(feet);
 rotate([0, 0, slew_angle]) {
   color("dimgray") cylinder(d = turntable_d, h = turntable_h);
   translate([0, 0, turntable_h]) {

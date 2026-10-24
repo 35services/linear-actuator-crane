@@ -13,6 +13,7 @@ that changes the CAD and commits the updated files, so they always match the sou
 | [`actuator_common.scad`](actuator_common.scad) | Pieces both housings share: lid ears with gussets, rear mounting boss, insert holes, section cut |
 | [`n20_actuator.scad`](n20_actuator.scad) | 3D printable enclosure that turns the N20 DC gear motor with M4 lead screw into an enclosed ram actuator |
 | [`diag_wire_example.scad`](diag_wire_example.scad) | Illustration: the DIAG jumper wire from a TMC2209 module to the carrier PCB |
+| [`use-cases/`](use-cases/README.md) | The actuator at a distance, driving through a bowden tube: outriggers for the crane, and a crane with its actuators on the deck |
 | [`stl/`](stl) | Printable parts, already turned for printing |
 | [`renders/`](renders) | The images below |
 | [`render.sh`](render.sh) | Regenerates `stl/` and `renders/` |
@@ -38,6 +39,20 @@ that changes the CAD and commits the updated files, so they always match the sou
   the actuator runs 20 mm/s, the boom goes 0 → 55° in 2.5 s. Details in the
   [main README](../README.md#speed-how-fast-can-it-move).
 * **Animation:** View → Animate (FPS 10, Steps 60) moves both axes together.
+* **Outriggers** (`outriggers = true`): two feet that fold down under the chassis, driven
+  through bowden tubes by a third actuator under the chassis. See
+  [use case 1](use-cases/README.md#use-case-1-bowden-outriggers--bowden_outriggersscad).
+
+---
+
+## Use cases: bowden drives – [`use-cases/`](use-cases/README.md)
+
+The actuator pushes and pulls a 1.75 mm PETG filament in a PTFE tube, like a 3D printer's
+bowden extruder, so it can sit flat on the vehicle while the far end does the work.
+
+| Outriggers under the chassis | Crane with both actuators on the deck |
+|---|---|
+| ![outriggers](renders/outriggers.png) | ![bowden crane](renders/crane_bowden.png) |
 
 ---
 

@@ -246,6 +246,7 @@ function act_stroke()    = stroke;
 function act_lead()      = screw_lead;
 function act_width()     = 2 * (out_y + ear_w);
 function act_floor()     = floor_z - wall;  // bottom of the housing below the screw axis
+function act_top()       = lid_z + wall;    // top of the lid above the screw axis
 
 module enclosed_actuator(e) {
   translate([-rear_end, 0, 0]) {
